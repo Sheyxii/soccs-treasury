@@ -101,9 +101,3 @@ Authority to create officer accounts, reset passwords, and change roles still
 needs definition. Start with local development account provisioning. Do not
 assume that Treasurer automatically has unrestricted account administration.
 
-## Reference documents
-
-The starter is informed by the revised SRS, project planning document, Gantt
-chart, context diagram, use-case diagram, system architecture diagram, and
-updated project proposal supplied for this project. Original documents and
-private client data are not included in this repository.
