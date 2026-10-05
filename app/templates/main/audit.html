@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Audit history · SOCCS Treasury{% endblock %}
+{% block content %}
+<h1>Audit history</h1>
+<p class="text-secondary">Read-only account and authentication activity. All timestamps are UTC.</p>
+<div class="card border-0 shadow-sm"><div class="table-responsive">
+<table class="table table-striped align-middle mb-0">
+  <thead><tr><th scope="col">Date / time (UTC)</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Record</th><th scope="col">Remarks</th></tr></thead>
+  <tbody>{% for entry in entries.items %}
+  <tr><td class="text-nowrap">{{ entry.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td><td>{{ entry.actor }}</td><td>{{ entry.action }}</td><td>{{ entry.record }}</td><td>{{ entry.remarks }}</td></tr>
+  {% else %}<tr><td colspan="5" class="p-4 text-center text-secondary">No activity recorded yet.</td></tr>{% endfor %}</tbody>
+</table>
+</div></div>
+<nav class="d-flex align-items-center gap-3 mt-4" aria-label="Audit pagination">
+{% if entries.has_prev %}<a class="btn btn-outline-primary" href="{{ url_for('main.audit', page=entries.prev_num) }}">Previous</a>{% endif %}
+<span class="text-secondary">Page {{ entries.page }} of {{ entries.pages or 1 }}</span>
+{% if entries.has_next %}<a class="btn btn-outline-primary" href="{{ url_for('main.audit', page=entries.next_num) }}">Next</a>{% endif %}
+</nav>
+{% endblock %}

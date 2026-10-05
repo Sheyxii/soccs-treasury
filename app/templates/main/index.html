@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">Officer workspace</p>
+<h1>Welcome, {{ current_user.full_name }}.</h1>
+<p class="lead text-secondary">You are signed in as <strong>{{ current_user.role.name }}</strong>.</p>
+<div class="row g-4 mt-2">
+  <div class="col-md-6">
+    <section class="card h-100 border-0 shadow-sm"><div class="card-body p-4">
+      <h2 class="h4">My account</h2><p>Review your officer identity and update your password.</p>
+      <a class="btn btn-primary" href="{{ url_for('users.profile') }}">Open my account</a>
+    </div></section>
+  </div>
+  {% if current_user.has_permission('audit.view') %}
+  <div class="col-md-6">
+    <section class="card h-100 border-0 shadow-sm"><div class="card-body p-4">
+      <h2 class="h4">Audit history</h2><p>Review sign-ins and account changes recorded by the system.</p>
+      <a class="btn btn-outline-primary" href="{{ url_for('main.audit') }}">View audit history</a>
+    </div></section>
+  </div>
+  {% endif %}
+</div>
+<div class="alert alert-info mt-4">
+  <strong>Foundation release.</strong> Officer access and account security are available.
+  Membership, payments, budgets, and financial reports will be added in later releases.
+</div>
+{% endblock %}
