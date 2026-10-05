@@ -1,0 +1,9 @@
+body { color: #18332b; background: #f4f7f5; }
+.treasury-nav { background: #174f40; }
+.eyebrow { color: #296650; font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.btn-primary { --bs-btn-bg: #21654f; --bs-btn-border-color: #21654f; --bs-btn-hover-bg: #174f40; --bs-btn-hover-border-color: #174f40; --bs-btn-active-bg: #174f40; --bs-btn-active-border-color: #174f40; }
+.btn-outline-primary { --bs-btn-color: #21654f; --bs-btn-border-color: #21654f; --bs-btn-hover-bg: #21654f; --bs-btn-hover-border-color: #21654f; --bs-btn-active-bg: #174f40; }
+.form-control:focus { border-color: #43866f; box-shadow: 0 0 0 .25rem rgb(33 101 79 / 18%); }
+.card { border-radius: .9rem; }
+main { min-height: 75vh; }
+td, dd { overflow-wrap: anywhere; }
