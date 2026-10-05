@@ -1,0 +1,29 @@
+# Local Python environment and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
+.coverage
+htmlcov/
+tmp/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+instance/
+
+# Local data, backups, and logs
+*.log
+*.sql
+*.sqlite
+*.sqlite3
+backups/
+
+# Editor and operating-system files
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
