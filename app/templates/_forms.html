@@ -1,0 +1,7 @@
+{% macro field(input, autocomplete='off') %}
+<div class="mb-3">
+  {{ input.label(class_='form-label') }}
+  {{ input(class_='form-control' + (' is-invalid' if input.errors else ''), autocomplete=autocomplete, aria_describedby=input.id + '-errors') }}
+  <div id="{{ input.id }}-errors">{% for error in input.errors %}<div class="text-danger small mt-1">{{ input.label.text }}: {{ error }}</div>{% endfor %}</div>
+</div>
+{% endmacro %}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}SOCCS Treasury{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  </head>
+  <body>
+    <a class="visually-hidden-focusable p-3" href="#main-content">Skip to content</a>
+    <nav class="navbar navbar-expand-md navbar-dark treasury-nav" aria-label="Main navigation">
+      <div class="container">
+        <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">SOCCS <span class="fw-light">Treasury</span></a>
+        {% if current_user.is_authenticated %}
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#officer-nav" aria-controls="officer-nav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+        <div class="collapse navbar-collapse" id="officer-nav">
+          <div class="navbar-nav me-auto">
+            <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
+            {% if current_user.has_permission('audit.view') %}<a class="nav-link" href="{{ url_for('main.audit') }}">Audit history</a>{% endif %}
+            <a class="nav-link" href="{{ url_for('users.profile') }}">My account</a>
+          </div>
+          <span class="navbar-text me-3">{{ current_user.role.name }}</span>
+          <form method="post" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-outline-light btn-sm" type="submit">Sign out</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </nav>
+    <main class="container py-5" id="main-content">
+      {% for category, message in get_flashed_messages(with_categories=true) %}
+      <div class="alert alert-{{ category if category in ['success', 'danger', 'warning', 'info'] else 'info' }}" role="alert">{{ message }}</div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="container py-4 small text-secondary border-top">SOCCS · College of Computer Studies · Officer access</footer>
+    <script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
+  </body>
+</html>
