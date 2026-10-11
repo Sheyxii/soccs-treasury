@@ -9,6 +9,7 @@
   </head>
   <body>
     <a class="visually-hidden-focusable p-3" href="#main-content">Skip to content</a>
+    {% block navigation %}
     <nav class="navbar navbar-expand-md navbar-dark treasury-nav" aria-label="Main navigation">
       <div class="container">
         <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">SOCCS <span class="fw-light">Treasury</span></a>
@@ -29,13 +30,16 @@
         {% endif %}
       </div>
     </nav>
-    <main class="container py-5" id="main-content">
+    {% endblock %}
+    <main class="{% block main_class %}container py-5{% endblock %}" id="main-content">
       {% for category, message in get_flashed_messages(with_categories=true) %}
       <div class="alert alert-{{ category if category in ['success', 'danger', 'warning', 'info'] else 'info' }}" role="alert">{{ message }}</div>
       {% endfor %}
       {% block content %}{% endblock %}
     </main>
+    {% block footer %}
     <footer class="container py-4 small text-secondary border-top">SOCCS · College of Computer Studies · Officer access</footer>
+    {% endblock %}
     <script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
   </body>
 </html>
