@@ -74,3 +74,5 @@ def record_audit(action, user=None, *, actor=None, record="session", remarks="")
     db.session.add(AuditLog(user_id=user.id if user else None,
                            actor=actor or (user.username if user else "anonymous"),
                            action=action, record=record, remarks=remarks))
+
+from app.models.finance import AcademicYear, Member, Budget, BudgetCategory, Transaction, Payment, Receipt, Income, Expense, OfficePolicy  # noqa: E402,F401
