@@ -1,7 +1,7 @@
 """Deny-by-default authorization policy for five officer roles.
 
-Financial permissions define boundaries for future modules, not implemented
-financial functionality. No officer receives account-administration rights.
+Routes enforce these permissions and record ownership. No officer receives
+account-administration rights; local maintenance uses the CLI.
 """
 from functools import wraps
 from flask import abort
