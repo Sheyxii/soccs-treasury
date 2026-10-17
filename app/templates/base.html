@@ -1,45 +1,38 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}SOCCS Treasury{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
-  </head>
-  <body>
-    <a class="visually-hidden-focusable p-3" href="#main-content">Skip to content</a>
-    {% block navigation %}
-    <nav class="navbar navbar-expand-md navbar-dark treasury-nav" aria-label="Main navigation">
-      <div class="container">
-        <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">SOCCS <span class="fw-light">Treasury</span></a>
-        {% if current_user.is_authenticated %}
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#officer-nav" aria-controls="officer-nav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
-        <div class="collapse navbar-collapse" id="officer-nav">
-          <div class="navbar-nav me-auto">
-            <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
-            {% if current_user.has_permission('audit.view') %}<a class="nav-link" href="{{ url_for('main.audit') }}">Audit history</a>{% endif %}
-            <a class="nav-link" href="{{ url_for('users.profile') }}">My account</a>
-          </div>
-          <span class="navbar-text me-3">{{ current_user.role.name }}</span>
-          <form method="post" action="{{ url_for('auth.logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-outline-light btn-sm" type="submit">Sign out</button>
-          </form>
-        </div>
-        {% endif %}
-      </div>
-    </nav>
-    {% endblock %}
-    <main class="{% block main_class %}container py-5{% endblock %}" id="main-content">
-      {% for category, message in get_flashed_messages(with_categories=true) %}
-      <div class="alert alert-{{ category if category in ['success', 'danger', 'warning', 'info'] else 'info' }}" role="alert">{{ message }}</div>
-      {% endfor %}
-      {% block content %}{% endblock %}
-    </main>
-    {% block footer %}
-    <footer class="container py-4 small text-secondary border-top">SOCCS · College of Computer Studies · Officer access</footer>
-    {% endblock %}
-    <script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
-  </body>
-</html>
+{% from '_ui.html' import icon %}
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}SOCCS Treasury{% endblock %}</title>
+<link rel="icon" href="{{ url_for('static',filename='images/socs-logo.png') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='vendor/bootstrap/bootstrap.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/app.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/workspace.css') }}">
+</head><body class="{{ 'signed-in' if current_user.is_authenticated else '' }}">
+<a class="skip-link" href="#main-content">Skip to content</a>
+{% block navigation %}{% if current_user.is_authenticated %}
+<aside class="sidebar" id="officer-nav" aria-label="Main navigation">
+<a class="brand" href="{{ url_for('main.index') }}"><img src="{{ url_for('static',filename='images/socs-logo.png') }}" alt="SOCCS logo"><span>SOCCS<span class="brand-sub">TREASURY</span></span></a>
+<p class="nav-caption">WORKSPACE</p>
+{% set ep = request.endpoint or '' %}
+{% macro nav(url,label,glyph,active) %}<a class="side-link {{ 'active' if active }}" href="{{ url }}" {% if active %}aria-current="page"{% endif %}>{{ icon(glyph) }}<span>{{ label }}</span></a>{% endmacro %}
+{{ nav(url_for('main.index'),'Overview' if current_user.role.name != 'Coordinator' else 'My workspace','grid',ep == 'main.index') }}
+{% if current_user.has_permission('members.manage') or current_user.has_permission('payments.verify') %}{{ nav(url_for('finance.members'),'Members','users',ep in ['finance.members','finance.member_form','finance.member_detail']) }}{% endif %}
+{% if current_user.has_permission('transactions.review') or current_user.has_permission('requests.view_own') or current_user.has_permission('financial_records.view') or has_authority(current_user,'overspend') %}{{ nav(url_for('finance.transactions'),'My requests' if current_user.role.name == 'Coordinator' else 'Transactions','arrows','transaction' in ep or ep == 'finance.receipt') }}{% endif %}
+{% if current_user.has_permission('budgets.manage') or current_user.has_permission('budgets.view') %}{{ nav(url_for('finance.budgets'),'Budgets','wallet','budget' in ep or 'category' in ep) }}{% endif %}
+{% if current_user.has_permission('reports.view') %}{{ nav(url_for('finance.reports'),'Reports','chart',ep == 'finance.reports') }}{% endif %}
+<p class="nav-caption mt-4">ADMINISTRATION</p>
+{% if current_user.has_permission('audit.view') %}{{ nav(url_for('main.audit'),'Audit history','shield',ep == 'main.audit') }}{% endif %}
+{% if has_authority(current_user,'backup') %}{{ nav(url_for('backups.index'),'Backups','database',ep.startswith('backups.')) }}{% endif %}
+{% if current_user.has_permission('budgets.manage') %}{{ nav(url_for('finance.settings'),'Fee settings','settings',ep == 'finance.settings') }}{% endif %}
+{{ nav(url_for('users.profile'),'My account','user',ep == 'users.profile') }}
+<div class="sidebar-bottom"><div class="local-status"><span></span> Local office system</div><p>Your records stay on this computer.</p><div class="officer"><span class="avatar">{{ current_user.full_name[:1] }}</span><span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role.name }}</small></span></div>
+<form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="sign-out">{{ icon('logout') }} Sign out</button></form></div>
+</aside>
+<header class="workspace-topbar"><div><button class="mobile-toggle" type="button" aria-label="Toggle menu" aria-controls="officer-nav" aria-expanded="false">{{ icon('menu') }}</button><span class="topbar-label">Student Organization of the College of Computer Studies</span></div><div class="topbar-date">{{ icon('calendar') }} {{ office_today.strftime('%d %b %Y') }}<span class="role-chip">{{ current_user.role.name }}</span></div></header>
+{% endif %}{% endblock %}
+<main class="{% block main_class %}workspace-main{% endblock %}" id="main-content">
+{% if config.get('DEMO_MODE') %}<div class="alert alert-info no-print">Sample-data preview · Separate from the office database.</div>{% endif %}
+{% for category,message in get_flashed_messages(with_categories=true) %}<div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }}" role="alert">{{ message }}</div>{% endfor %}
+{% if backup_error and current_user.is_authenticated and has_authority(current_user,'backup') %}<div class="alert alert-warning">Automatic backup failed. Check disk space and create a backup from the Backups page.</div>{% endif %}
+{% block content %}{% endblock %}</main>
+{% block footer %}<footer class="workspace-footer"><span>SOCCS Treasury</span><span>LSPU · Santa Cruz Campus</span></footer>{% endblock %}
+<script src="{{ url_for('static',filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script><script src="{{ url_for('static',filename='js/app.js') }}"></script></body></html>
