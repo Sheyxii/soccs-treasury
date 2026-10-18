@@ -1,43 +1,64 @@
 {% extends "base.html" %}
 {% from "_forms.html" import field %}
-{% block title %}Sign in · SOCCS Treasury{% endblock %}
+{% block title %}Sign in | SOCCS Treasury{% endblock %}
 {% block navigation %}{% endblock %}
 {% block footer %}{% endblock %}
+{% block notices %}{% endblock %}
 {% block main_class %}login-page{% endblock %}
 {% block content %}
 <div class="login-shell">
-  <section class="login-brand" aria-label="SOCCS">
+  <section class="login-brand" aria-label="SOCCS at LSPU Santa Cruz Campus">
     <img class="login-logo" src="{{ url_for('static', filename='images/socs-logo.png') }}" alt="Student Organization of the College of Computer Studies logo">
-    <p class="login-organization">Student Organization of the<br>College of Computer Studies</p>
-    <p class="login-campus">LSPU · Santa Cruz Campus</p>
   </section>
   <section class="login-card" aria-labelledby="login-heading">
     <header class="login-heading">
-      <h1 id="login-heading">SOCCS Treasury</h1>
-      <p class="login-subtitle">Membership, Financial, and Budget Management System</p>
-      <p class="login-description">Sign in to manage membership fees, finances, and reports.</p>
+      <h1 id="login-heading">SOCCS Treasury<br>Management System</h1>
+      <p class="login-description">Manage membership fees, finances, and reports.</p>
     </header>
     <form method="post" novalidate>
       {{ form.hidden_tag() }}
+      <div class="login-notices">
+        {% if config.get('DEMO_MODE') %}<div class="login-alert login-alert-info">Sample-data preview &mdash; separate from the office database.</div>{% endif %}
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="login-alert login-alert-{{ category if category in ['success','danger','warning','info'] else 'info' }}" role="alert">{{ message }}</div>
+        {% endfor %}
+      </div>
       {{ field(form.username, 'username') }}
-      {{ field(form.password, 'current-password') }}
-      <button class="password-toggle" type="button" data-password-toggle="#password" aria-controls="password" aria-label="Show password">Show</button>
-      {{ form.submit(class_='login-submit', value='Log in') }}
+      <div class="login-password-field mb-3">
+        <div class="login-password-label">
+          {{ form.password.label(class_='form-label') }}
+          <button class="login-forgot" type="button" aria-haspopup="dialog" aria-controls="password-recovery">Forgot password?</button>
+        </div>
+        <div class="login-password-control">
+          {{ form.password(class_='form-control' + (' is-invalid' if form.password.errors else ''), autocomplete='current-password', aria_describedby='password-errors') }}
+          <button class="password-toggle" type="button" aria-controls="password" aria-label="Show password" aria-pressed="false">
+            <img src="{{ url_for('static', filename='images/show.png') }}" alt="" aria-hidden="true">
+          </button>
+        </div>
+        <div id="password-errors">{% for error in form.password.errors %}<div class="text-danger small mt-1">{{ form.password.label.text }}: {{ error }}</div>{% endfor %}</div>
+      </div>
+      {{ form.submit(class_='login-submit', value='Sign in') }}
     </form>
-    <p class="login-help">Forgot your password? Ask the Treasurer to reset it.</p>
-    <footer class="login-status">
-      <span><i aria-hidden="true"></i> Offline · Local system</span>
-      <span>v1.0</span>
-    </footer>
   </section>
 </div>
+<dialog class="login-recovery" id="password-recovery" aria-labelledby="recovery-heading" aria-describedby="recovery-description">
+  <h2 id="recovery-heading">Reset your password</h2>
+  <p id="recovery-description">Contact your local system custodian to reset your password. Have your username and officer role ready so they can verify your identity.</p>
+  <p>After your password is reset, return here to sign in with your new password.</p>
+  <form method="dialog"><button class="login-submit" autofocus>Back to sign in</button></form>
+</dialog>
 <script>
-  document.querySelector("[data-password-toggle]").addEventListener("click", function () {
-    const input = document.querySelector(this.dataset.passwordToggle);
+  const recoveryDialog = document.getElementById("password-recovery");
+  document.querySelector(".login-forgot").addEventListener("click", () => recoveryDialog.showModal());
+  document.querySelector(".password-toggle").addEventListener("click", function () {
+    const input = document.getElementById("password");
     const visible = input.type === "text";
     input.type = visible ? "password" : "text";
-    this.textContent = visible ? "Show" : "Hide";
+    this.querySelector("img").src = visible
+      ? "{{ url_for('static', filename='images/show.png') }}"
+      : "{{ url_for('static', filename='images/hide.png') }}";
     this.setAttribute("aria-label", visible ? "Show password" : "Hide password");
+    this.setAttribute("aria-pressed", String(!visible));
   });
 </script>
 {% endblock %}

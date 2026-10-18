@@ -30,9 +30,11 @@
 <header class="workspace-topbar"><div><button class="mobile-toggle" type="button" aria-label="Toggle menu" aria-controls="officer-nav" aria-expanded="false">{{ icon('menu') }}</button><span class="topbar-label">Student Organization of the College of Computer Studies</span></div><div class="topbar-date">{{ icon('calendar') }} {{ office_today.strftime('%d %b %Y') }}<span class="role-chip">{{ current_user.role.name }}</span></div></header>
 {% endif %}{% endblock %}
 <main class="{% block main_class %}workspace-main{% endblock %}" id="main-content">
+{% block notices %}
 {% if config.get('DEMO_MODE') %}<div class="alert alert-info no-print">Sample-data preview · Separate from the office database.</div>{% endif %}
 {% for category,message in get_flashed_messages(with_categories=true) %}<div class="alert alert-{{ category if category in ['success','danger','warning','info'] else 'info' }}" role="alert">{{ message }}</div>{% endfor %}
 {% if backup_error and current_user.is_authenticated and has_authority(current_user,'backup') %}<div class="alert alert-warning">Automatic backup failed. Check disk space and create a backup from the Backups page.</div>{% endif %}
+{% endblock %}
 {% block content %}{% endblock %}</main>
 {% block footer %}<footer class="workspace-footer"><span>SOCCS Treasury</span><span>LSPU · Santa Cruz Campus</span></footer>{% endblock %}
 <script src="{{ url_for('static',filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script><script src="{{ url_for('static',filename='js/app.js') }}"></script></body></html>
