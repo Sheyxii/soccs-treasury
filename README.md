@@ -1,190 +1,182 @@
 # SOCCS Treasury
 
-Offline office application for the Student Organization of the College of Computer
-Studies. This release implements the **Iteration 1 / M4 foundation**: Flask
-structure, database configuration and migrations, officer accounts, five roles,
-authentication, server-side RBAC, and a locally bundled Bootstrap layout.
+A standalone, offline office website for membership collections, approvals, budgets,
+expenses, reports and receipts. Built with **Flask, SQLAlchemy ORM, MySQL/MariaDB
+(XAMPP), Waitress and locally bundled Bootstrap 5.3.8**, with a responsive purple workspace.
 
-The original repository was a landing-page scaffold. See
-[the milestone review](docs/milestone-review.md) for requirements, corrections,
-scope decisions, and remaining acceptance checks.
+## Use this installation
 
-## Implemented
+1. Start **MySQL** in XAMPP. Apache is not required.
+2. Double-click **Start-Treasury.cmd** in this folder.
+3. Open **http://127.0.0.1:5000** and sign in with your existing officer account.
+4. As Treasurer, open **Fee settings** and create the academic year with the actual
+   collection dates. Then add members and create budgets with category allocations.
 
-- Application factory with auth, users, and main blueprints.
-- SQLAlchemy models for roles, officer users, and audit events; versioned migration.
-- Username/password login, salted Werkzeug password hashes, CSRF-protected POST
-  logout, and a 30-minute inactivity timeout.
-- Account status checks on every request; password, role, and status changes
-  invalidate existing sessions.
-- Coordinator, Treasurer, Auditor, President, and Adviser roles with a shared
-  deny-by-default permission policy. Audit history is restricted to Treasurer
-  and Auditor. Each officer can access their own account and change their password.
-- Trusted local CLI provisioning, role changes, activation/deactivation, password
-  resets, and audit entries stored atomically with account changes.
-- Bootstrap 5.3.8 CSS and JavaScript stored locally, including its MIT license.
-  No CDN, web fonts, public registration, student accounts, or extra admin role.
-- Waitress launcher bound to 127.0.0.1.
+Keep the launcher open while using the app. Stop with Ctrl+C, then stop MySQL from
+XAMPP before shutting down Windows. Run one app process only. Stop the app before
+schema upgrades or local account maintenance.
 
-Membership records, payments, transaction approvals, budgets, income, expenses,
-receipts, financial dashboards/reports, and backup/restore are later iterations.
-The home page labels this foundation release and does not show invented financial
-figures or links to unimplemented modules.
+Existing officer passwords were preserved. There is no production default password.
+The existing treasurer account remains available; the local custodian can reset a
+forgotten password using the command below.
 
-## Windows setup
+## Confirmed financial rules
 
-Use Python 3.11 or newer. Verified here with Python 3.14. Install dependencies once
-while online (or from a prepared wheel collection); normal operation is offline.
+- **PHP 250 per student per academic year:** PHP 100 SOCCS, PHP 75 ITUH and PHP 75 CSS
+  for both IT and CS students. This user-confirmed rule supersedes the earlier
+  documents' program-specific split.
+- Treasurer records post immediately unless over budget. Coordinator requests stay
+  Pending until Treasurer approval. Rejection requires a reason.
+- Pending and rejected records do not change funds or budget spending. Pending
+  membership requests reserve the member/year; rejection releases the reservation.
+- Over-budget expenses require **explicit Treasurer approval and an explanation**.
+  Category availability is checked again when approving.
+- Water-refilling income belongs to SOCCS. Available SOCCS funds exclude the ITUH
+  and CSS shares. Allocating a budget plans spending; it does not move cash.
+- GCash is recorded and verified manually. The app neither connects to GCash nor moves money.
+- Academic-year fee rules are preserved once created. Posted records cannot be
+  edited or deleted through the website. Partial membership payments are unsupported.
 
-From the repository directory in PowerShell:
+## Officer access
 
-```powershell
+| Role | Available work |
+| --- | --- |
+| Treasurer | Members, payments, decisions, budgets, income, expenses, reports, verification, audit, fee setup, backup/restore |
+| Coordinator | Manage members, submit payments/expenses, view own requests and member payment status |
+| Auditor | Read member/financial records, verify posted payments, view budgets, reports and audit |
+| President / Adviser | Financial dashboard and reports |
+
+All officers can change their own password. Account provisioning remains a trusted
+local command because the requirements do not assign account administration to an
+officer role. No student logins or public registration are included.
+
+## New Windows installation
+
+Use Python 3.11+ and MySQL/MariaDB with InnoDB and enforced CHECK constraints.
+Verified with Python 3.14 and XAMPP MariaDB 10.4.32. Install dependencies once while
+online; normal operation requires no internet connection.
+
+From this folder in PowerShell:
+
+~~~powershell
 py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_hex(32))"
-```
+~~~
 
-Put the generated value in `SECRET_KEY` in `.env`. Startup rejects missing/short
-secrets. Preserve existing configuration; never commit `.env` or credentials.
-For an environment without pip, the alternative is:
-`uv pip install --python .venv/Scripts/python.exe -r requirements-dev.txt`.
+Set SECRET_KEY in .env to the generated value, and configure MYSQL_HOST,
+MYSQL_PORT, MYSQL_DATABASE, MYSQL_USER and MYSQL_PASSWORD for a dedicated app
+database/account. Preserve an existing .env. Keep a secure copy of SECRET_KEY:
+saved backups require their original signing key. Never commit secrets or records.
 
-### Database choice
+After starting XAMPP MySQL:
 
-**MySQL is the repository default.** The revised SRS permits SQLite or MySQL;
-the planning and analysis documents originally use SQLite. This implementation
-retains the repository's existing MySQL decision. Record client confirmation of
-the selected engine in your project documents.
-
-Install/start a local MySQL server with InnoDB and enforced CHECK constraints.
-Using your local MySQL administrator, create a dedicated development database and
-a database-scoped development account. Replace the example password:
-
-```sql
-CREATE DATABASE soccs_treasury_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'soccs_app'@'127.0.0.1' IDENTIFIED BY 'REPLACE_WITH_A_LOCAL_PASSWORD';
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES
-ON soccs_treasury_dev.* TO 'soccs_app'@'127.0.0.1';
-```
-
-These are development/migration privileges, scoped to this database. For turnover,
-use a separate migration account and a restricted runtime account (SELECT on
-roles; SELECT/INSERT/UPDATE on users; SELECT/INSERT on audit_logs). Extend grants
-deliberately as future modules are added. Never use the MySQL root account as the
-application's runtime login.
-
-Set `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, and
-`MYSQL_PASSWORD` in `.env`. Individual settings safely handle special characters
-in passwords. Bind the database server to loopback as well.
-
-For an **explicit SQLite-only demo**, set this instead in `.env`:
-
-```dotenv
-DATABASE_URL=sqlite:///soccs_treasury_dev.sqlite3
-```
-
-It stores the database under the ignored `instance/` folder, outside static files.
-`DATABASE_URL` overrides the MySQL fields. There is no silent fallback from a
-failed MySQL connection. SQLite testing does not verify a live MySQL installation.
-
-### Initialize and run
-
-After configuring the chosen database:
-
-```powershell
-.\.venv\Scripts\python.exe -m flask --app app db upgrade
+~~~powershell
+.\.venv\Scripts\python.exe scripts/setup_xampp.py
+.\.venv\Scripts\python.exe scripts/upgrade_database.py
 .\.venv\Scripts\python.exe -m flask --app app seed-roles
 .\.venv\Scripts\python.exe -m flask --app app check-db
 .\.venv\Scripts\python.exe -m flask --app app create-user --username treasurer --full-name "SOCCS Treasurer" --role Treasurer
 .\.venv\Scripts\python.exe run.py
-```
+~~~
 
-The account command prompts for a password twice without displaying it. There are
-no default credentials. Use a 12–128 character password. Create each authorized
-officer separately using one of the five role names (case-sensitive).
+The setup helper uses local root only to create the configured database and grant
+database-scoped permissions. If root has a password, add --admin-password to
+scripts/setup_xampp.py; it prompts securely. It does not change existing passwords.
+The running app uses the dedicated .env account.
 
-Open http://127.0.0.1:5000 and sign in. Stop with Ctrl+C. This launcher works offline
-and never enables debug mode. For development only:
+Migrations are versioned; do not run db init again. The upgrade helper saves raw
+pre-upgrade data under instance/pre-upgrade before migrating. This engineering
+snapshot is not an importable app backup.
 
-```powershell
-.\.venv\Scripts\python.exe -m flask --app app run --debug --host 127.0.0.1
-```
+Waitress listens on **127.0.0.1:5000**. This is a single-computer, single-process
+deployment. Financial operations and backup/restore are serialized inside the app.
+Internet hosting and access from other computers are outside this configuration.
 
-Do not bind to 0.0.0.0 or expose the office application to the internet.
-The localhost HTTP configuration uses HttpOnly and SameSite=Lax cookies.
-If the deployment is moved to HTTPS, enable SESSION_COOKIE_SECURE.
+## Daily workflow
 
-### Local account maintenance
+1. **Members:** add number, name, program, year and section. Search/filter by program,
+   academic year and payment status. Deactivate inactive members to preserve history.
+2. **Payments:** select the member/year, enter date, amount and method. Verify GCash
+   evidence manually and enter its reference. Duplicate annual payments and reused
+   incoming GCash references are blocked.
+3. **Review:** Treasurer checks Pending records and approves or rejects. Approval
+   creates the payment, income and numbered receipt together.
+4. **Budgets/expenses:** create semester/event budgets and category allocations.
+   Record each expense with date, purpose and receipt/reference. Utilization is
+   highlighted from 80%; overspending is held for approval.
+5. **Reports:** select dates and optional budget scope; export CSV or use the browser's
+   Print / Save PDF. Budget filters restrict expenses; income remains organization-wide
+   and is labeled accordingly. Annual membership counts use the selected academic
+   year, independently of the financial date filter.
+6. **Receipts:** open an approved payment and select View receipt. Receipts retain
+   the student's identity as recorded at payment time.
 
-The documents do not assign officer-account administration to a role. Maintenance
-therefore requires trusted access to the office computer and its terminal, pending
-client confirmation. An OS username is recorded as the local audit actor.
-Protect the OS account and application/database files accordingly.
+## Backups and recovery
 
-```powershell
+The Treasurer can create, download, import and restore signed JSON snapshots from
+**Backups**. The four most recent are retained under instance/backups. Weekly backup
+runs on the first authenticated visit when the latest snapshot is at least seven
+days old. It cannot run while the app/computer is off. Failures show a Treasurer warning.
+
+Snapshots contain member records, officer accounts and finances. Signing detects
+modification; it does **not encrypt** the file. Keep downloaded copies and the
+original SECRET_KEY securely on separate storage.
+
+To restore, enter RESTORE and the current Treasurer password. All current records
+are replaced. The app validates the snapshot and first saves a recovery copy, then
+restores in a database transaction. Successful restoration revokes every officer
+session. Sign in with an account from the restored snapshot.
+
+On another PC, install the same app version and dependencies, use the original
+SECRET_KEY in the new .env, initialize migrations and a temporary Treasurer account,
+then import and restore. New database credentials may differ. App restore does not
+change XAMPP's database users or server permissions.
+
+## Local account maintenance
+
+Use a 12–128 character password. Changes are audited and revoke existing sessions.
+
+~~~powershell
 .\.venv\Scripts\python.exe -m flask --app app list-users
+.\.venv\Scripts\python.exe -m flask --app app create-user --username coordinator --full-name "Coordinator Name" --role Coordinator
+.\.venv\Scripts\python.exe -m flask --app app reset-password treasurer
 .\.venv\Scripts\python.exe -m flask --app app set-user-role coordinator Auditor
 .\.venv\Scripts\python.exe -m flask --app app set-user-status coordinator inactive
-.\.venv\Scripts\python.exe -m flask --app app set-user-status coordinator active
-.\.venv\Scripts\python.exe -m flask --app app reset-password coordinator
-```
+~~~
 
-Role/status/password changes require a fresh login. Student/member records are
-separate from officer identities. There is no account deletion or audit editing UI.
+## Tests and preview
 
-## Permission boundaries
-
-| Role | Foundation pages | Future functional permissions |
-| --- | --- | --- |
-| Coordinator | Home, own account | Manage members; submit payments/expenses; view own requests |
-| Treasurer | Home, own account, audit history | Membership/payment operations, transaction review, budgets, income, expenses, dashboard/reports |
-| Auditor | Home, own account, audit history | Verify payment status; read financial records/budgets/reports |
-| President | Home, own account | Read dashboard/reports |
-| Adviser | Home, own account | Read dashboard/reports |
-
-Future routes must apply `@permission_required("permission.name")` from
-`app/permissions.py` and enforce record-level ownership where applicable.
-Showing/hiding a link is not authorization. No role currently has overspending
-approval, account administration, or backup/restore permissions; those authorities
-need definition before the corresponding modules are implemented.
-
-## Tests and migrations
-
-```powershell
+~~~powershell
 .\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe scripts/test_mysql.py
 .\.venv\Scripts\python.exe -m flask --app app db check
-```
+.\.venv\Scripts\python.exe scripts/preview.py
+~~~
 
-Tests use temporary SQLite databases and the committed migration, not operational
-data. They exercise all roles, permission denial, CSRF, login failures, password
-changes, session expiry/revocation, CLI provisioning, migration upgrade/downgrade,
-uniqueness, audit logging, and locally served assets. See [tests/README.md](tests/README.md).
+Tests use disposable databases. The MySQL helper creates a random
+soccs_treasury_test_* database and removes only that generated database afterward.
+It assumes local XAMPP root with a blank password on port 3306. Never point test
+fixtures at operational data. See [tests/README.md](tests/README.md).
 
-The initial migration is committed. Do **not** run `db init` again.
-For a future model change, use `db migrate -m "Describe the change"`, inspect the
-generated migration, test against a disposable database, then run `db upgrade`.
-Back up an existing operational database before schema changes.
+The sample preview runs at **http://127.0.0.1:5001** in a separate SQLite database
+and displays a sample-data banner. Usernames: treasurer, coordinator, auditor,
+president, adviser. Their preview-only password is **Preview-only-2026!**.
+These credentials do not apply to the real app.
 
-## Repository map
+## Project map
 
 | Path | Purpose |
 | --- | --- |
-| app/__init__.py | Factory, session checks, error pages and response headers |
-| app/extensions.py | SQLAlchemy, migrations, Flask-Login and CSRF |
-| app/models/ | Roles, users and audit models |
-| app/permissions.py | Central role policy and route decorator |
-| app/auth/ | Login and logout |
-| app/users/ | Own account and password changes |
-| app/main/ | Home and restricted audit history |
-| app/cli.py | Trusted local account/database maintenance |
-| app/templates/ | Bootstrap base layout and pages |
-| app/static/vendor/bootstrap/ | Local Bootstrap assets and license |
-| migrations/ | Versioned database schema |
-| tests/ | Disposable-database behavior tests |
-| config.py, .env.example | Environment configuration |
-| run.py | Local Waitress launcher |
-| docs/milestone-review.md | Requirements review and acceptance record |
+| app/finance/ | Membership, posting/review, budgets, reports, fee policies |
+| app/models/ | SQLAlchemy models and constraints |
+| app/backups.py | Snapshot signing, retention and restoration |
+| app/auth/, app/users/, app/permissions.py | Authentication and authorization |
+| app/templates/, app/static/ | Purple Bootstrap workspace, offline assets, print layouts |
+| migrations/ | Versioned schema |
+| scripts/ | Setup, pre-upgrade snapshot, preview and isolated MySQL tests |
+| tests/ | Regression and workflow tests |
+| docs/implementation.md | Decisions, verification and remaining officer acceptance |
 
-The repository files were untracked when reviewed. Review them and make your
-initial Git commit when ready. No remote publication is performed by setup.
+Original login artwork and custom styles were retained.
