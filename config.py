@@ -10,7 +10,7 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
-    MAX_CONTENT_LENGTH = 1024 * 1024
+    MAX_CONTENT_LENGTH = 50 * 1024 * 1024
 
 def environment_settings():
     """Read settings on each factory invocation, including CLI and WSGI."""

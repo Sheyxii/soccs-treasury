@@ -1,8 +1,9 @@
 """Create and configure the SOCCS Treasury application."""
 import time
+from threading import RLock
 from pathlib import Path
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, flash, redirect, render_template, request, session, url_for, g
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import CSRFError
 from config import Config, environment_settings
@@ -23,6 +24,22 @@ def create_app(test_config=None):
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please sign in to continue."
     from app.models import User, record_audit
+
+    # One Waitress process on the office PC. Serialize DB requests so snapshots,
+    # restores and write workflows cannot interleave; database constraints remain.
+    office_lock = RLock()
+
+    @app.before_request
+    def lock_office_database():
+        if request.endpoint != 'static':
+            office_lock.acquire()
+            g.office_locked = True
+
+    @app.teardown_request
+    def unlock_office_database(error=None):
+        if g.pop('office_locked', False):
+            db.session.remove()
+            office_lock.release()
 
     @login_manager.user_loader
     def load_user(token):
@@ -55,6 +72,38 @@ def create_app(test_config=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(users_bp)
+    from app.finance import bp as finance_bp
+    from app.backups import bp as backups_bp, automatic_backup
+    app.register_blueprint(finance_bp)
+    app.register_blueprint(backups_bp)
+
+    @app.before_request
+    def maintain_backups():
+        if current_user.is_authenticated and request.method == 'GET' and request.endpoint != 'static':
+            automatic_backup()
+
+    @app.context_processor
+    def treasury_context():
+        from app.finance.services import today, has_authority
+        return dict(office_today=today(), has_authority=has_authority,
+                    backup_error=app.extensions.get('backup_error', False))
+
+    @app.template_filter('money')
+    def format_money(value):
+        return f'₱{value or 0:,.2f}'
+
+    @app.template_filter('localtime')
+    def localtime(value):
+        from datetime import timedelta
+        return (value + timedelta(hours=8)).strftime('%d %b %Y, %I:%M %p') if value else '—'
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return render_template('errors/error.html', title='Check your request', message=error.description), 400
+
+    @app.errorhandler(413)
+    def too_large(error):
+        return render_template('errors/error.html', title='File too large', message='Use a backup smaller than 50 MB.'), 413
     from app.cli import register_commands
     register_commands(app)
 

@@ -127,11 +127,11 @@ def reset_password(username):
 @click.command("check-db")
 @with_appcontext
 def check_db():
-    """Check connectivity and the migrated foundation schema."""
+    """Check connectivity and every mapped treasury table."""
     count = db.session.scalar(db.select(db.func.count(Role.id)))
-    db.session.execute(db.select(User.id).limit(1))
-    db.session.execute(db.select(AuditLog.id).limit(1))
-    click.echo(f"Database connected; foundation tables available; {count} roles.")
+    for table in db.metadata.sorted_tables:
+        db.session.execute(db.select(table).limit(1))
+    click.echo(f"Database connected; {len(db.metadata.tables)} treasury tables available; {count} roles.")
 
 def register_commands(app):
     for command in (seed_roles, create_user, list_users, set_user_role, set_user_status, reset_password, check_db):
