@@ -1,26 +1,20 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}{% from '_ui.html' import heading,icon,transaction_table,empty %}
+{% block title %}Overview · SOCCS Treasury{% endblock %}
 {% block content %}
-<p class="eyebrow">Officer workspace</p>
-<h1>Welcome, {{ current_user.full_name }}.</h1>
-<p class="lead text-secondary">You are signed in as <strong>{{ current_user.role.name }}</strong>.</p>
-<div class="row g-4 mt-2">
-  <div class="col-md-6">
-    <section class="card h-100 border-0 shadow-sm"><div class="card-body p-4">
-      <h2 class="h4">My account</h2><p>Review your officer identity and update your password.</p>
-      <a class="btn btn-primary" href="{{ url_for('users.profile') }}">Open my account</a>
-    </div></section>
-  </div>
-  {% if current_user.has_permission('audit.view') %}
-  <div class="col-md-6">
-    <section class="card h-100 border-0 shadow-sm"><div class="card-body p-4">
-      <h2 class="h4">Audit history</h2><p>Review sign-ins and account changes recorded by the system.</p>
-      <a class="btn btn-outline-primary" href="{{ url_for('main.audit') }}">View audit history</a>
-    </div></section>
-  </div>
-  {% endif %}
+{% call heading('Financial overview','A clear view of your organization’s funds and activity.') %}{% if current_user.has_permission('payments.record') %}<a class="btn btn-primary" href="{{ url_for('finance.transaction_form',kind='Payment') }}">{{ icon('plus') }} Record payment</a>{% else %}<a class="btn btn-outline-primary" href="{{ url_for('finance.reports') }}">View reports</a>{% endif %}{% endcall %}
+{% if not year %}<div class="setup-notice">{{ icon('calendar') }}<div><strong>Set up your academic year</strong><p>Confirm the collection dates before recording membership payments.</p></div>{% if current_user.has_permission('budgets.manage') %}<a href="{{ url_for('finance.settings') }}">Open fee settings →</a>{% endif %}</div>{% endif %}
+<div class="metrics-grid">
+<section class="metric-card metric-featured"><div class="metric-top"><span>Available SOCCS funds</span>{{ icon('wallet') }}</div><strong>{{ balance|money }}</strong><small>SOCCS income less posted expenses</small></section>
+<section class="metric-card"><div class="metric-top"><span>Total collections</span><span class="metric-icon green">{{ icon('arrow-down') }}</span></div><strong>{{ gross|money }}</strong><small>SOCCS share <b>{{ soccs|money }}</b></small></section>
+<section class="metric-card"><div class="metric-top"><span>Total expenses</span><span class="metric-icon rose">{{ icon('arrow-up') }}</span></div><strong>{{ expenses|money }}</strong><small>Approved expenses across all budgets</small></section>
+<section class="metric-card"><div class="metric-top"><span>Membership payments</span><span class="metric-icon purple">{{ icon('users') }}</span></div><strong>{{ paid }} <span class="metric-denominator">/ {{ members }}</span></strong><small>{{ year.name if year else 'No current academic year' }} · Active members</small></section>
 </div>
-<div class="alert alert-info mt-4">
-  <strong>Foundation release.</strong> Officer access and account security are available.
-  Membership, payments, budgets, and financial reports will be added in later releases.
-</div>
+<div class="dashboard-grid">
+<section class="panel"><div class="panel-heading"><div><h2>Income & expenses</h2><p>SOCCS share and posted expenses · Last 6 months</p></div><div class="chart-legend"><i class="legend-income"></i> Income <i class="legend-expense"></i> Expenses</div></div>
+<div class="bar-chart" role="img" aria-label="Monthly income and expenses with amounts below each month">{% for month in chart %}<div class="chart-month"><div class="bar-pair"><div class="bar income-bar" style="height: {{ month.income_height }}%" title="Income {{ month.income|money }}"></div><div class="bar expense-bar" style="height: {{ month.expense_height }}%" title="Expenses {{ month.expense|money }}"></div></div><strong>{{ month.label }}</strong><small>{{ month.income|money }}<br>{{ month.expense|money }}</small></div>{% endfor %}</div></section>
+<section class="panel"><div class="panel-heading"><div><h2>Revenue allocation</h2><p>All confirmed collections</p></div>{{ icon('chart') }}</div><div class="allocation-total"><span>Total collected</span><strong>{{ gross|money }}</strong></div>
+{% for label,value,color in [('SOCCS',soccs,'purple'),('ITUH',ituh,'lavender'),('CSS',css,'pink')] %}<div class="allocation-row"><span><i class="allocation-dot {{ color }}"></i>{{ label }}</span><strong>{{ value|money }}</strong></div>{% endfor %}<p class="panel-note">ITUH and CSS shares are reserved for those organizations and excluded from available SOCCS funds.</p></section></div>
+<div class="dashboard-grid"><section class="panel">{% if current_user.role.name in ['Treasurer','Auditor'] %}<div class="panel-heading"><div><h2>Recent activity</h2><p>The latest recorded transactions</p></div><a href="{{ url_for('finance.transactions') }}">View all →</a></div>{{ transaction_table(recent) }}{% else %}<div class="panel-heading"><div><h2>This month</h2><p>Approved collections and spending</p></div></div><div class="allocation-row"><span>Total collections</span><strong>{{ month_income|money }}</strong></div><div class="allocation-row"><span>Posted expenses</span><strong>{{ month_expenses|money }}</strong></div><p class="panel-note">Use financial reports to compare periods, review organization shares, and track budget spending.</p>{% endif %}</section>
+<section class="panel"><div class="panel-heading"><div><h2>Budget utilization</h2><p>{{ utilization|round(1) }}% used across all budgets</p></div>{{ icon('wallet') }}</div><div class="budget-preview">{% for category in categories %}<div class="budget-preview-row"><div><strong>{{ category.name }}</strong><span>{{ category.utilization|round(0)|int }}%</span></div><small>{{ category.budget.name }}</small><div class="progress"><div class="progress-bar {{ 'bg-warning' if category.utilization >= 80 }}" style="width: {{ [category.utilization,100]|min }}%"></div></div><small>{{ category.spent|money }} of {{ category.allocated|money }}</small></div>{% else %}{{ empty('No budgets yet','Create a budget and allocate categories to track spending.') }}{% endfor %}</div></section></div>
+{% if current_user.has_permission('transactions.review') %}<div class="review-strip"><span class="metric-icon purple">{{ icon('clock') }}</span><div><strong>{{ pending }} request{{ '' if pending == 1 else 's' }} awaiting review</strong><p>Pending requests do not affect your funds or budgets.</p></div><a class="btn btn-outline-primary" href="{{ url_for('finance.transactions',status='Pending') }}">Review requests →</a></div>{% endif %}
 {% endblock %}

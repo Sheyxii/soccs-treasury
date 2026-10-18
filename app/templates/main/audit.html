@@ -2,7 +2,8 @@
 {% block title %}Audit history · SOCCS Treasury{% endblock %}
 {% block content %}
 <h1>Audit history</h1>
-<p class="text-secondary">Read-only account and authentication activity. All timestamps are UTC.</p>
+<p class="text-secondary">Read-only history of account, membership and financial changes. All timestamps are UTC.</p>
+<form class="filter-bar panel mb-4"><input class="form-control" name="q" value="{{ request.args.get('q','') }}" placeholder="Search actor, action or transaction" aria-label="Search audit history"><button class="btn btn-outline-primary">Search</button></form>
 <div class="card border-0 shadow-sm"><div class="table-responsive">
 <table class="table table-striped align-middle mb-0">
   <thead><tr><th scope="col">Date / time (UTC)</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Record</th><th scope="col">Remarks</th></tr></thead>
