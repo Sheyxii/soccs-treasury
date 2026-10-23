@@ -1,0 +1,23 @@
+{% macro icon(name) %}<svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'grid' %}<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+{% elif name in ['users','user'] %}<circle cx="10" cy="7" r="4"/><path d="M2 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2m2-17a4 4 0 0 1 0 7m2 10v-4"/>
+{% elif name == 'arrows' %}<path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/>
+{% elif name == 'wallet' %}<path d="M20 8V5H5a2 2 0 0 1 0-4h14v4M3 3v16a2 2 0 0 0 2 2h15V8H5a2 2 0 0 1-2-2M20 12h-5v5h5"/>
+{% elif name == 'chart' %}<path d="M4 3v17h17M8 15v-4m5 4V7m5 8V4"/>
+{% elif name == 'shield' %}<path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/>
+{% elif name == 'database' %}<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 4 16 4 16 0V5M4 12c0 4 16 4 16 0"/>
+{% elif name == 'settings' %}<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor"/><circle cx="16" cy="17" r="3" fill="currentColor"/>
+{% elif name == 'logout' %}<path d="M9 4H4v16h5m5-12 4 4-4 4m-5-4h10"/>
+{% elif name == 'calendar' %}<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18"/>
+{% elif name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{% elif name == 'arrow-up' %}<path d="M7 17 17 7M7 7h10v10"/>
+{% elif name == 'arrow-down' %}<path d="m7 7 10 10M7 17h10V7"/>
+{% elif name == 'clock' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+{% elif name == 'search' %}<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>
+{% elif name == 'menu' %}<path d="M4 6h16M4 12h16M4 18h16"/>
+{% else %}<path d="M4 4h16v16H4zM8 8h8m-8 4h8m-8 4h5"/>{% endif %}</svg>{% endmacro %}
+{% macro badge(status) %}<span class="status-badge status-{{ status|lower }}"><span></span>{{ status }}</span>{% endmacro %}
+{% macro heading(title,subtitle,eyebrow='TREASURY WORKSPACE') %}<div class="page-heading"><div><p class="eyebrow">{{ eyebrow }}</p><h1>{{ title }}</h1><p class="page-subtitle">{{ subtitle }}</p></div>{% if caller %}<div class="page-actions">{{ caller() }}</div>{% endif %}</div>{% endmacro %}
+{% macro pagination(entries) %}<div class="pagination-bar"><span>{{ entries.total }} records · Page {{ entries.page }} of {{ entries.pages or 1 }}</span><div>{% if entries.has_prev %}<a class="btn btn-sm btn-light" href="{{ request.path }}?{{ dict(request.args,page=entries.prev_num)|urlencode }}">Previous</a>{% endif %}{% if entries.has_next %}<a class="btn btn-sm btn-light" href="{{ request.path }}?{{ dict(request.args,page=entries.next_num)|urlencode }}">Next</a>{% endif %}</div></div>{% endmacro %}
+{% macro empty(title,message) %}<div class="empty-state">{{ icon('document') }}<h3>{{ title }}</h3><p>{{ message }}</p></div>{% endmacro %}
+{% macro transaction_table(transactions,link=true) %}<div class="table-responsive"><table class="table treasury-table"><thead><tr><th>Transaction</th><th>Date</th><th>Type</th><th>Status</th><th class="text-end">Amount</th></tr></thead><tbody>{% for tx in transactions %}<tr><td>{% if link %}<a class="record-link" href="{{ url_for('finance.transaction_detail',tx_id=tx.id) }}">{{ tx.number }}</a>{% else %}<strong>{{ tx.number }}</strong>{% endif %}<small class="cell-detail">{{ tx.member_name or tx.description }}</small></td><td class="text-nowrap">{{ tx.occurred_on.strftime('%d %b %Y') }}</td><td><span class="type-label">{{ tx.kind }}</span></td><td>{{ badge(tx.status) }}</td><td class="text-end amount {{ 'expense-text' if tx.kind == 'Expense' else '' }}">{{ tx.amount|money }}</td></tr>{% else %}<tr><td colspan="5">{{ empty('No transactions yet','Recorded payments, income and expenses will appear here.') }}</td></tr>{% endfor %}</tbody></table></div>{% endmacro %}
