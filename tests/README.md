@@ -1,21 +1,22 @@
-# Foundation tests
+# Regression tests
 
-Run from the repository root:
+Run **.\.venv\Scripts\python.exe -m pytest -q** from the repository root.
+Tests create temporary migrated SQLite databases with foreign keys and CSRF enabled.
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest -q
-```
+For XAMPP run **.\.venv\Scripts\python.exe scripts/test_mysql.py**. It creates a random
+soccs_treasury_test_* database using local root on port 3306 (blank password),
+passes its URL to the child tests, and drops only that database in a finally block.
+Operational records and grants are untouched. Do not set TREASURY_TEST_DATABASE_URL
+to a database you want to retain. Fixtures reject names without the test prefix.
 
-Install requirements-dev.txt first. Tests create separate temporary SQLite
-databases using the actual migration, enable SQLite foreign keys, and keep CSRF
-enabled. No operational database or .env credentials are used by test fixtures.
+Coverage includes all five roles, CSRF, denied URLs, authentication, sessions,
+passwords, CLI maintenance, migrations, exact PHP 250 and 100/75/75 shares for both
+programs, pending/rejected/approved accounting, duplicate payments and references,
+resubmission, atomic rollback, over-budget authorization and approval-time balance
+checks, HTTP collection/receipt/report/verification, member/budget/fee forms,
+nonfinite amounts, record ownership, oversight privacy, backup round trip,
+integrity, retention, password confirmation and session revocation.
 
-Coverage includes all five roles, direct forbidden requests, future permission
-boundaries, login failures, inactive users, session expiry and revocation, safe
-redirects, password changes, local CLI account management, uniqueness, migrations,
-read-only audit access, and local Bootstrap assets.
-
-These tests do not establish live MySQL compatibility. After configuring a
-disposable MySQL database, run db upgrade, seed-roles, check-db, db check, and
-perform the role/login smoke checks in docs/milestone-review.md. Never run
-destructive migration downgrade tests on operational data.
+On 17 October 2026 all **66 tests passed on SQLite and XAMPP MariaDB 10.4.32**.
+This does not establish measured 80% coverage, load-test targets or officer acceptance.
+See docs/implementation.md for remaining acceptance work.
