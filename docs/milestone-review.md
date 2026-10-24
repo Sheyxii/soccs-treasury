@@ -1,5 +1,10 @@
 # Iteration 1 / M4 foundation review
 
+> Historical foundation review. The full implementation supersedes the
+> deferred-module and unconfirmed-policy notes below. See
+> [implementation.md](implementation.md) and the current README for delivery,
+> confirmed financial rules, verification, and remaining officer acceptance.
+
 ## Verdict
 
 The original Flask folder layout was a suitable starting point, but the stated
