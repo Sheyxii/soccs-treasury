@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% from '_ui.html' import heading,icon,transaction_table %}
+{% block content %}{{ heading('My workspace','Manage members, submit collections and follow your requests.') }}
+<div class="quick-actions">{% for label,desc,glyph,url in [('Add a member','Register student details.','users',url_for('finance.member_form')),('Submit payment','Send a collection for Treasurer approval.','wallet',url_for('finance.transaction_form',kind='Payment')),('Submit expense','Record an expense for review.','arrow-up',url_for('finance.transaction_form',kind='Expense'))] %}<a class="panel action-panel" href="{{ url }}">{{ icon(glyph) }}<h2>{{ label }}</h2><p>{{ desc }}</p></a>{% endfor %}</div>
+<section class="panel"><div class="panel-heading"><div><h2>My recent requests</h2><p>Approved requests become official financial records.</p></div><a href="{{ url_for('finance.transactions') }}">View all →</a></div>{{ transaction_table(transactions) }}</section>{% endblock %}
