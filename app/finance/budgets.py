@@ -1,10 +1,10 @@
 """Budget plans and auditable category allocations."""
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, redirect, url_for, flash, abort
 from flask_login import current_user
 from app.extensions import db
-from app.models import Budget, BudgetCategory, Transaction, record_audit
+from app.models import Budget, BudgetCategory, record_audit
 from app.finance import bp
-from app.finance.forms import BudgetForm, CategoryForm
+from app.finance.forms import BudgetForm, CategoryForm, ConfirmForm
 from app.finance.routes import allow, save
 
 
@@ -32,7 +32,23 @@ def budget_form():
 @allow('budgets.manage', 'budgets.view')
 def budget_detail(budget_id):
     budget = db.get_or_404(Budget, budget_id)
-    return render_template('finance/budget.html', budget=budget, form=CategoryForm())
+    return render_template('finance/budget.html', budget=budget, form=CategoryForm(), status_form=ConfirmForm())
+
+
+@bp.post('/budgets/<int:budget_id>/status')
+@allow('budgets.manage')
+def budget_status(budget_id):
+    """Close a finished budget (no new expenses) or reopen it. Records are never removed."""
+    form = ConfirmForm()
+    if not form.validate_on_submit():
+        abort(400)
+    budget = db.get_or_404(Budget, budget_id)
+    budget.active = not budget.active
+    record_audit('budget.reopened' if budget.active else 'budget.closed', current_user, record=f'budget:{budget.id}', remarks=budget.name)
+    if save():
+        flash(f'{budget.name} was reopened. New expenses can be recorded against it.' if budget.active
+              else f'{budget.name} was closed. It stays in reports, but new expenses cannot be recorded against it.', 'success')
+    return redirect(url_for('finance.budget_detail', budget_id=budget.id))
 
 
 @bp.post('/budgets/<int:budget_id>/categories')
@@ -42,7 +58,6 @@ def category_form(budget_id, category_id=None):
     budget = db.get_or_404(Budget, budget_id)
     category = db.get_or_404(BudgetCategory, category_id) if category_id else BudgetCategory(budget=budget)
     if category_id and category.budget_id != budget_id:
-        from flask import abort
         abort(404)
     form = CategoryForm(obj=category if category_id else None)
     if form.validate_on_submit():

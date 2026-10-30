@@ -7,8 +7,9 @@ expenses, reports and receipts. Built with **Flask, SQLAlchemy ORM, MySQL/MariaD
 ## Use this installation
 
 1. Start **MySQL** in XAMPP. Apache is not required.
-2. Double-click **Start-Treasury.cmd** in this folder.
-3. Open **http://127.0.0.1:5000** and sign in with your existing officer account.
+2. Double-click **Start-Treasury.cmd** in this folder. It checks the database, then opens
+   **http://127.0.0.1:5000** in your browser.
+3. Sign in with your existing officer account.
 4. As Treasurer, open **Fee settings** and create the academic year with the actual
    collection dates. Then add members and create budgets with category allocations.
 
@@ -90,14 +91,29 @@ Migrations are versioned; do not run db init again. The upgrade helper saves raw
 pre-upgrade data under instance/pre-upgrade before migrating. This engineering
 snapshot is not an importable app backup.
 
-Waitress listens on **127.0.0.1:5000**. This is a single-computer, single-process
-deployment. Financial operations and backup/restore are serialized inside the app.
-Internet hosting and access from other computers are outside this configuration.
+Waitress listens on **127.0.0.1:5000** by default (HOST, PORT and THREADS in .env).
+Run one app process only: financial operations and backup/restore are serialized inside it.
+Warnings and errors are written to instance/logs/treasury.log (rotated automatically).
+
+## Going online later
+
+The same code can be put on a server without changes; only .env differs.
+
+1. Use a MySQL/MariaDB server (set the MYSQL_* values, or a full DATABASE_URL).
+2. Put a reverse proxy with HTTPS (Nginx, Caddy or IIS) in front of `python run.py`.
+   Keep HOST=127.0.0.1 so only the proxy can reach the app.
+3. In .env set `SESSION_COOKIE_SECURE=true` and `TRUST_PROXY=1`.
+4. Point the proxy's health check at **/health** (returns `{"status": "ok"}`; no data shown).
+5. Keep one app process. Sign-in attempts are limited per account
+   (LOGIN_MAX_ATTEMPTS / LOGIN_LOCK_MINUTES), sessions end after SESSION_TIMEOUT_MINUTES of
+   inactivity, and pages are sent with a strict Content-Security-Policy.
 
 ## Daily workflow
 
-1. **Members:** add number, name, program, year and section. Search/filter by program,
-   academic year and payment status. Deactivate inactive members to preserve history.
+1. **Members:** add student number (format 1234-5678), name, program, year and section.
+   Search/filter by program, academic year and payment status. Deactivate members who leave;
+   an inactive member with no payment records can be deleted, while members with records stay
+   inactive to preserve history.
 2. **Payments:** select the member/year, enter date, amount and method. Verify GCash
    evidence manually and enter its reference. Duplicate annual payments and reused
    incoming GCash references are blocked.
@@ -106,11 +122,13 @@ Internet hosting and access from other computers are outside this configuration.
 4. **Budgets/expenses:** create semester/event budgets and category allocations.
    Record each expense with date, purpose and receipt/reference. Utilization is
    highlighted from 80%; overspending is held for approval.
-5. **Reports:** select dates and optional budget scope; export CSV or use the browser's
+5. **Close finished budgets** from the budget page. Closed budgets stay in reports but
+   are no longer offered for new expenses; they can be reopened.
+6. **Reports:** select dates and optional budget scope; export CSV or use the browser's
    Print / Save PDF. Budget filters restrict expenses; income remains organization-wide
    and is labeled accordingly. Annual membership counts use the selected academic
    year, independently of the financial date filter.
-6. **Receipts:** open an approved payment and select View receipt. Receipts retain
+7. **Receipts:** open an approved payment and select View receipt. Receipts retain
    the student's identity as recorded at payment time.
 
 ## Backups and recovery
@@ -160,8 +178,8 @@ soccs_treasury_test_* database and removes only that generated database afterwar
 It assumes local XAMPP root with a blank password on port 3306. Never point test
 fixtures at operational data. See [tests/README.md](tests/README.md).
 
-The sample preview runs at **http://127.0.0.1:5001** in a separate SQLite database
-and displays a sample-data banner. Usernames: treasurer, coordinator, auditor,
+The sample preview (double-click **Start-Preview.cmd**) runs at **http://127.0.0.1:5001**
+in a separate SQLite database that is rebuilt on every start, and displays a sample-data banner. Usernames: treasurer, coordinator, auditor,
 president, adviser. Their preview-only password is **Preview-only-2026!**.
 These credentials do not apply to the real app.
 

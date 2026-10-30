@@ -28,8 +28,8 @@ def save():
         return False
 
 
-def paginate(stmt):
-    return db.paginate(stmt, page=max(1, request.args.get('page', 1, type=int)), per_page=20, error_out=False)
+def paginate(stmt, per_page=20):
+    return db.paginate(stmt, page=max(1, request.args.get('page', 1, type=int)), per_page=per_page, error_out=False)
 
 
 from app.finance import members, transactions, budgets, reports, settings  # noqa: E402,F401

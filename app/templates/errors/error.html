@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} · SOCCS Treasury{% endblock %}
 {% block content %}
+<section class="panel error-panel" role="alert">
+<p class="error-code">{{ code or 'Error' }}</p>
 <h1>{{ title }}</h1>
-<p class="lead">{{ message }}</p>
-<a class="btn btn-primary" href="{{ url_for('main.index') if current_user.is_authenticated else url_for('auth.login') }}">Continue</a>
+<p>{{ message }}</p>
+<div class="form-actions justify-content-start border-0 pt-0">
+<a class="btn btn-primary" href="{{ url_for('main.index') if current_user.is_authenticated else url_for('auth.login') }}">{{ 'Go to overview' if current_user.is_authenticated else 'Go to sign in' }}</a>
+{% if request.referrer and request.referrer.startswith(request.host_url) %}<a class="btn btn-light" href="{{ request.referrer }}">Go back</a>{% endif %}
+</div>
+</section>
 {% endblock %}

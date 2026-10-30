@@ -4,8 +4,8 @@
 <title>{% block title %}SOCCS Treasury{% endblock %}</title>
 <link rel="icon" href="{{ url_for('static',filename='images/socs-logo.png') }}">
 <link rel="stylesheet" href="{{ url_for('static',filename='vendor/bootstrap/bootstrap.min.css') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/app.css') }}">
-<link rel="stylesheet" href="{{ url_for('static',filename='css/workspace.css') }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/app.css',v=asset_version) }}">
+<link rel="stylesheet" href="{{ url_for('static',filename='css/workspace.css',v=asset_version) }}">
 </head><body class="{{ 'signed-in' if current_user.is_authenticated else '' }}">
 <a class="skip-link" href="#main-content">Skip to content</a>
 {% block navigation %}{% if current_user.is_authenticated %}
@@ -27,7 +27,7 @@
 <div class="sidebar-bottom"><div class="local-status"><span></span> Local office system</div><p>Your records stay on this computer.</p><div class="officer"><span class="avatar">{{ current_user.full_name[:1] }}</span><span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role.name }}</small></span></div>
 <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="sign-out">{{ icon('logout') }} Sign out</button></form></div>
 </aside>
-<header class="workspace-topbar"><div><button class="mobile-toggle" type="button" aria-label="Toggle menu" aria-controls="officer-nav" aria-expanded="false">{{ icon('menu') }}</button><span class="topbar-label">Student Organization of the College of Computer Studies</span></div><div class="topbar-date">{{ icon('calendar') }} {{ office_today.strftime('%d %b %Y') }}<span class="role-chip">{{ current_user.role.name }}</span></div></header>
+<header class="workspace-topbar"><div><button class="mobile-toggle" type="button" aria-label="Toggle menu" aria-controls="officer-nav" aria-expanded="false">{{ icon('menu') }}</button><span class="topbar-label"><strong>Student Organization of the College of Computer Studies</strong><small>LSPU Santa Cruz Campus</small></span></div>{% if can_search %}<form class="topbar-search" role="search" action="{{ url_for('main.search') }}" method="get" data-suggest-url="{{ url_for('main.search_suggest') }}">{{ icon('search') }}<input class="form-control" type="search" name="q" value="{{ request.args.get('q','') if request.endpoint == 'main.search' else '' }}" placeholder="Search members, TXN numbers, references…" aria-label="Search members and transactions" maxlength="120" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="search-suggestions"><kbd class="search-hint" aria-hidden="true">/</kbd><div class="search-suggestions" id="search-suggestions" role="listbox" aria-label="Search suggestions" hidden></div><span class="visually-hidden" aria-live="polite" data-suggest-status></span></form>{% endif %}<div class="topbar-date">{{ icon('calendar') }} <time datetime="{{ office_today.isoformat() }}"><span class="topbar-weekday">{{ office_today.strftime('%A') }}, </span>{{ office_today.day }} {{ office_today.strftime('%B %Y') }}</time><span class="role-chip" title="Signed in as {{ current_user.full_name }}">{{ current_user.role.name }}</span></div></header>
 {% endif %}{% endblock %}
 <main class="{% block main_class %}workspace-main{% endblock %}" id="main-content">
 {% block notices %}
@@ -37,4 +37,4 @@
 {% endblock %}
 {% block content %}{% endblock %}</main>
 {% block footer %}<footer class="workspace-footer"><span>SOCCS Treasury</span><span>LSPU · Santa Cruz Campus</span></footer>{% endblock %}
-<script src="{{ url_for('static',filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script><script src="{{ url_for('static',filename='js/app.js') }}"></script></body></html>
+<script src="{{ url_for('static',filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script><script src="{{ url_for('static',filename='js/app.js',v=asset_version) }}"></script></body></html>

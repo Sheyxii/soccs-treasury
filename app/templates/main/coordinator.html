@@ -1,0 +1,9 @@
+{% extends 'base.html' %}{% from '_ui.html' import heading,icon,transaction_table %}
+{% block title %}My workspace · SOCCS Treasury{% endblock %}
+{% block content %}{% call heading('My workspace','Submit collections and expenses for Treasurer approval.') %}
+{% if current_user.has_permission('payments.submit') %}<a class="btn btn-primary" href="{{ url_for('finance.transaction_form',kind='Payment') }}">{{ icon('plus') }} Submit payment</a>{% endif %}
+{% if current_user.has_permission('expenses.submit') %}<a class="btn btn-outline-primary" href="{{ url_for('finance.transaction_form',kind='Expense') }}">{{ icon('plus') }} Submit expense</a>{% endif %}
+{% endcall %}
+<div class="review-strip"><span class="metric-icon purple">{{ icon('clock') }}</span><div><strong>Requests stay Pending until the Treasurer approves them</strong><p>Pending and rejected requests do not change funds or budgets.</p></div>{% if current_user.has_permission('members.manage') %}<a class="btn btn-outline-primary" href="{{ url_for('finance.members') }}">Manage members</a>{% endif %}</div>
+<section class="panel mt-4"><div class="panel-heading"><div><h2>My recent requests</h2><p>Your latest submissions and their status</p></div><a href="{{ url_for('finance.transactions') }}">View all</a></div>{{ transaction_table(transactions) }}</section>
+{% endblock %}

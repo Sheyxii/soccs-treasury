@@ -1,20 +1,15 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% from '_ui.html' import heading,icon,empty,pagination %}
 {% block title %}Audit history · SOCCS Treasury{% endblock %}
 {% block content %}
-<h1>Audit history</h1>
-<p class="text-secondary">Read-only history of account, membership and financial changes. All timestamps are UTC.</p>
-<form class="filter-bar panel mb-4"><input class="form-control" name="q" value="{{ request.args.get('q','') }}" placeholder="Search actor, action or transaction" aria-label="Search audit history"><button class="btn btn-outline-primary">Search</button></form>
-<div class="card border-0 shadow-sm"><div class="table-responsive">
-<table class="table table-striped align-middle mb-0">
-  <thead><tr><th scope="col">Date / time (UTC)</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Record</th><th scope="col">Remarks</th></tr></thead>
-  <tbody>{% for entry in entries.items %}
-  <tr><td class="text-nowrap">{{ entry.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td><td>{{ entry.actor }}</td><td>{{ entry.action }}</td><td>{{ entry.record }}</td><td>{{ entry.remarks }}</td></tr>
-  {% else %}<tr><td colspan="5" class="p-4 text-center text-secondary">No activity recorded yet.</td></tr>{% endfor %}</tbody>
-</table>
-</div></div>
-<nav class="d-flex align-items-center gap-3 mt-4" aria-label="Audit pagination">
-{% if entries.has_prev %}<a class="btn btn-outline-primary" href="{{ url_for('main.audit', page=entries.prev_num) }}">Previous</a>{% endif %}
-<span class="text-secondary">Page {{ entries.page }} of {{ entries.pages or 1 }}</span>
-{% if entries.has_next %}<a class="btn btn-outline-primary" href="{{ url_for('main.audit', page=entries.next_num) }}">Next</a>{% endif %}
-</nav>
+{{ heading('Audit history', 'A read-only record of sign-ins, account changes, member updates and financial decisions. Times are Philippine time.') }}
+<section class="panel">
+<form class="filter-bar" role="search"><div class="search-field">{{ icon('search') }}<input class="form-control" name="q" value="{{ request.args.get('q','') }}" placeholder="Search by officer, action or record (e.g. TXN-000012)" aria-label="Search audit history"></div><button class="btn btn-outline-primary">Search</button>{% if request.args.get('q') %}<a href="{{ url_for('main.audit') }}">Clear</a>{% endif %}</form>
+<div class="table-responsive"><table class="table treasury-table">
+<thead><tr><th scope="col">When</th><th scope="col">Officer</th><th scope="col">Action</th><th scope="col">Record</th><th scope="col">Details</th></tr></thead>
+<tbody>{% for entry in entries.items %}
+<tr><td class="text-nowrap">{{ entry.created_at|localtime }}</td><td><strong>{{ entry.actor }}</strong></td><td><span class="type-label">{{ entry.action|replace('.', ': ')|replace('_', ' ') }}</span></td><td>{{ entry.record }}</td><td>{{ entry.remarks }}</td></tr>
+{% else %}<tr><td colspan="5">{{ empty('No matching activity' if request.args.get('q') else 'No activity recorded yet', 'Try a different search.' if request.args.get('q') else 'Sign-ins and record changes will appear here.') }}</td></tr>{% endfor %}</tbody>
+</table></div>
+{{ pagination(entries) }}
+</section>
 {% endblock %}

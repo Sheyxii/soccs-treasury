@@ -39,7 +39,8 @@ def transactions():
         if number.isdigit():
             clauses.append(Transaction.id == int(number))
         stmt = stmt.where(db.or_(*clauses))
-    entries = paginate(stmt.order_by(Transaction.created_at.desc(), Transaction.id.desc()))
+    # Latest first: by transaction date, then by when it was entered. 10 rows per page.
+    entries = paginate(stmt.order_by(Transaction.occurred_on.desc(), Transaction.created_at.desc(), Transaction.id.desc()), per_page=10)
     return render_template('finance/transactions.html', entries=entries, status=status, kind=kind, q=q)
 
 
@@ -133,4 +134,22 @@ def receipt(receipt_id):
     tx = receipt.payment.transaction
     if not can_read_transaction(current_user, tx):
         abort(403)
-    return render_template('finance/receipt.html', receipt=receipt, tx=tx)
+    income = db.session.scalar(db.select(Income).where(Income.transaction_id == tx.id))
+    return render_template('finance/receipt.html', receipt=receipt, tx=tx, income=income)
+
+
+@bp.get('/receipts/<int:receipt_id>/pdf')
+@login_required
+def receipt_pdf(receipt_id):
+    """Download the official receipt as an A4 PDF file."""
+    from flask import current_app, Response
+    from pathlib import Path
+    from app.finance.receipt_pdf import build_receipt_pdf
+    receipt = db.get_or_404(Receipt, receipt_id)
+    tx = receipt.payment.transaction
+    if not can_read_transaction(current_user, tx):
+        abort(403)
+    income = db.session.scalar(db.select(Income).where(Income.transaction_id == tx.id))
+    data = build_receipt_pdf(receipt, tx, income, Path(current_app.static_folder) / 'images' / 'socs-logo.png')
+    return Response(data, mimetype='application/pdf',
+                    headers={'Content-Disposition': f'attachment; filename="{receipt.number}.pdf"'})

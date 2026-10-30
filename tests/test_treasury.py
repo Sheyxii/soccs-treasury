@@ -282,3 +282,217 @@ def test_automatic_backup_unwritable_directory_does_not_break_pages(app, monkeyp
         monkeypatch.setattr(backups, 'files', unavailable)
         backups.automatic_backup()
         assert app.extensions['backup_error'] is True
+
+
+def test_search_suggestions_match_words_and_respect_roles(app, client, records):
+    with app.app_context():
+        submit(**records)
+        db.session.commit()
+    login(client, 'treasurer')
+    data = client.get('/search/suggest?q=student sample').get_json()
+    assert [m['label'] for m in data['members']] == ['Sample Student']
+    assert data['transactions'] and data['transactions'][0]['status'] == 'Approved'
+    assert client.get('/search/suggest?q=TXN-1').get_json()['transactions'][0]['label'].startswith('TXN-000001')
+    assert client.get('/search/suggest?q=s').get_json()['members'] == []
+    assert client.get('/search?q=sample student').status_code == 200
+    post(client, '/auth/logout', {})
+    login(client, 'coordinator')
+    data = client.get('/search/suggest?q=sample').get_json()
+    assert data['members'] and data['transactions'] == []
+    post(client, '/auth/logout', {})
+    login(client, 'president')
+    assert client.get('/search/suggest?q=sample').status_code == 403
+
+
+def coordinator_request(client, kind, data):
+    page = client.get(f'/transactions/new/{kind}')
+    key = re.search(r'name="submission_key"[^>]*value="([^"]+)"', page.text).group(1)
+    response = post(client, f'/transactions/new/{kind}', dict(data, submission_key=key))
+    assert 'Awaiting Treasurer review' in response.text or 'Over budget' in response.text, response.text[:2000]
+    return int(re.search(r'<h1>TXN-0*(\d+)</h1>', response.text).group(1))
+
+
+def decide_from_page(client, tx_id, decision, remarks=''):
+    page = client.get(f'/transactions/{tx_id}')
+    assert 'Confirm decision' in page.text or 'Approve' in page.text
+    return post(client, f'/transactions/{tx_id}/decide', dict(decision=decision, remarks=remarks), f'/transactions/{tx_id}')
+
+
+def test_treasurer_processes_every_kind_of_coordinator_request(app, client, records):
+    login(client, 'coordinator')
+    expense = coordinator_request(client, 'Expense', dict(category_id=records['category_id'], amount='300', occurred_on='2026-10-01', method='Cash', reference='OR-1', description='Printing handouts'))
+    over = coordinator_request(client, 'Expense', dict(category_id=records['category_id'], amount='5000', occurred_on='2026-10-01', method='Cash', reference='OR-2', description='Tarpaulin printing'))
+    payment = coordinator_request(client, 'Payment', dict(records, amount='250', occurred_on='2026-10-01', method='Cash', reference='', description='Annual membership fee'))
+    post(client, '/auth/logout', {})
+    login(client, 'treasurer')
+    pending = client.get('/transactions?status=Pending').text
+    assert all(f'TXN-{n:06d}' in pending for n in (expense, over, payment))
+    assert 'Decision saved' in decide_from_page(client, expense, 'approve').text
+    assert 'Explain why this over-budget expense is authorized' in decide_from_page(client, over, 'approve').text
+    assert 'Decision saved' in decide_from_page(client, over, 'approve', 'Approved by officers meeting').text
+    assert 'A rejection reason is required' in decide_from_page(client, payment, 'reject').text
+    assert 'Decision saved' in decide_from_page(client, payment, 'reject', 'Duplicate entry').text
+    with app.app_context():
+        status = {t.id: t.status for t in db.session.scalars(db.select(Transaction))}
+        assert (status[expense], status[over], status[payment]) == ('Approved', 'Approved', 'Rejected')
+
+
+@pytest.mark.parametrize('number,ok', [('2026-0002', True), (' 2026-0002 ', True), ('2026-002', False), ('20260002', False),
+                                       ('2026-00A2', False), ('AB26-0002', False), ('2026-00002', False), ('2026-0002x', False)])
+def test_student_number_format(client, records, number, ok):
+    login(client)
+    response = post(client, '/members/new', dict(student_number=number, full_name='Format Check', program='IT', year_level=1, section='A', contact='', active='y'), '/members/new')
+    assert ('Member record saved' in response.text) == ok
+    if not ok:
+        assert 'Use the format 1234-5678' in response.text
+
+
+def test_delete_only_inactive_members_without_records(app, client, records):
+    with app.app_context():
+        spare = Member(student_number='2026-0099', full_name='Spare Student', program='CS', year_level=1, section='B', contact='', active=True)
+        db.session.add(spare)
+        submit(**records)
+        db.session.commit()
+        spare_id, paid_id = spare.id, records['member_id']
+    login(client)
+    post(client, f'/members/{spare_id}/delete', {}, f'/members/{spare_id}')
+    with app.app_context():
+        assert db.session.get(Member, spare_id) is not None  # still active: refused
+        db.session.get(Member, spare_id).active = False
+        db.session.get(Member, paid_id).active = False
+        db.session.commit()
+    page = client.get(f'/members/{paid_id}').text
+    assert 'has payment records' in page and 'Delete member</button>' not in page
+    assert 'Delete member</button>' in client.get(f'/members/{spare_id}').text
+    response = post(client, f'/members/{paid_id}/delete', {}, f'/members/{paid_id}')
+    assert 'cannot be deleted' in response.text
+    response = post(client, f'/members/{spare_id}/delete', {}, f'/members/{spare_id}')
+    assert 'Spare Student was deleted' in response.text
+    with app.app_context():
+        assert db.session.get(Member, spare_id) is None and db.session.get(Member, paid_id) is not None
+        assert db.session.scalar(db.select(AuditLog).where(AuditLog.action == 'member.deleted')).remarks == 'Spare Student'
+    post(client, '/auth/logout', {})
+    login(client, 'auditor')
+    assert client.post(f'/members/{paid_id}/delete', data={'csrf_token': csrf(client, '/')}).status_code == 403
+
+
+def test_transactions_list_shows_ten_latest_first(app, client, records):
+    with app.app_context():
+        for day in range(1, 13):  # entered oldest-date-last on purpose
+            submit(kind='Income', amount=10, occurred_on=date(2026, 10, 13 - day), description=f'Water day {13 - day}')
+        db.session.commit()
+    login(client)
+    first = client.get('/transactions').text
+    numbers = re.findall(r'class="record-link" href="/transactions/\d+">(TXN-\d+)</a>', first)
+    assert len(numbers) == 10
+    dates = re.findall(r'<td class="text-nowrap">(\d{2} \w{3} \d{4})</td>', first)
+    assert dates[0] == '12 Oct 2026' and dates[-1] == '03 Oct 2026'
+    assert 'Showing 1–10 of 12' in first
+    second = client.get('/transactions?page=2').text
+    assert len(re.findall(r'class="record-link" href="/transactions/\d+">', second)) == 2 and 'Showing 11–12 of 12' in second
+
+
+def test_login_pauses_after_repeated_wrong_passwords(app, client):
+    for _ in range(5):
+        client.post('/auth/login', data={'csrf_token': csrf(client, '/auth/login'), 'username': 'auditor', 'password': 'wrong-password-x'})
+    page = client.post('/auth/login', data={'csrf_token': csrf(client, '/auth/login'), 'username': 'auditor', 'password': PASSWORD}, follow_redirects=True)
+    assert 'Too many failed sign-in attempts' in page.text
+    login(client, 'treasurer')  # other accounts are unaffected
+    assert client.get('/').status_code == 200
+
+
+def test_close_and_reopen_budget(app, client, records):
+    login(client)
+    with app.app_context():
+        budget_id = db.session.get(BudgetCategory, records['category_id']).budget_id
+    page = post(client, f'/budgets/{budget_id}/status', {}, f'/budgets/{budget_id}')
+    assert 'was closed' in page.text
+    form = client.get('/transactions/new/Expense').text
+    assert 'Printing' not in form  # closed budgets are not offered for new expenses
+    assert 'was reopened' in post(client, f'/budgets/{budget_id}/status', {}, f'/budgets/{budget_id}').text
+
+
+def test_unpaid_filter_lists_only_active_members(app, client, records):
+    with app.app_context():
+        db.session.add(Member(student_number='2026-0050', full_name='Gone Student', program='IT', year_level=2, section='C', contact='', active=False))
+        db.session.commit()
+    login(client)
+    page = client.get('/members?status=unpaid').text
+    assert 'Sample Student' in page and 'Gone Student' not in page
+
+
+def test_health_error_pages_and_security_headers(app, client, records):
+    assert client.get('/health').get_json() == {'status': 'ok'}
+    login(client)
+    missing = client.get('/members/99999')
+    assert missing.status_code == 404 and 'Page not found' in missing.text and 'Go to overview' in missing.text
+    assert client.get('/transactions/1/decide').status_code == 405
+    headers = client.get('/').headers
+    assert "script-src 'self'" in headers['Content-Security-Policy'] and headers['X-Frame-Options'] == 'DENY'
+
+
+def test_audit_search_survives_paging(app, client):
+    with app.app_context():
+        for n in range(30):
+            db.session.add(AuditLog(actor='treasurer', action='member.updated', record=f'member:x{n}', remarks=''))
+        db.session.commit()
+    login(client)
+    first = client.get('/audit?q=member.updated').text
+    assert 'page=2' in first and 'q=member.updated' in first.split('page=2')[0][-200:] + first.split('page=2')[1][:200]
+
+
+@pytest.mark.parametrize('role', ['treasurer', 'coordinator', 'auditor', 'president', 'adviser'])
+def test_every_page_renders_for_every_role(app, client, records, role):
+    """Crawl every link reachable from the overview; nothing may crash."""
+    with app.app_context():
+        submit(**records)
+        submit(kind='Expense', amount=100, reference='OR-9', category_id=records['category_id'], description='Ink')
+        db.session.commit()
+    login(client, role)
+    seen, queue = set(), ['/', '/search?q=sample', '/me', '/reports', '/transactions/new/Payment', '/transactions/new/Expense',
+                          '/transactions/new/Income', '/members/new', '/budgets/new', '/receipts/1', '/transactions/1']
+    while queue and len(seen) < 80:
+        path = queue.pop()
+        if path in seen:
+            continue
+        seen.add(path)
+        response = client.get(path)
+        assert response.status_code in (200, 302, 403, 404), (role, path, response.status_code)
+        if response.status_code == 200 and response.mimetype == 'text/html':
+            for link in re.findall(r'href="(/[^"#]*)"', response.text):
+                link = link.replace('&amp;', '&')
+                if not link.startswith(('/static', '/auth/logout', '/backups/')) and 'export' not in link:
+                    queue.append(link)
+    assert len(seen) > 5
+
+
+@pytest.mark.parametrize('amount,words', [
+    ('250', 'Two hundred fifty pesos only'), ('1', 'One peso only'), ('0.75', 'Zero pesos and seventy-five centavos only'),
+    ('1250.50', 'One thousand two hundred fifty pesos and fifty centavos only'),
+    ('2000000', 'Two million pesos only'), ('115', 'One hundred fifteen pesos only')])
+def test_amount_in_words(amount, words):
+    from app.finance.words import peso_words
+    assert peso_words(Decimal(amount)) == words
+
+
+def test_official_receipt_content(app, client, records):
+    with app.app_context():
+        submit(**records)
+        db.session.commit()
+    login(client)
+    page = client.get('/receipts/1').text
+    for text in ('Official receipt', 'RCT-000001', 'Sample Student', 'Two hundred fifty pesos only', '₱100.00', '₱75.00', 'Received by', 'TXN-000001'):
+        assert text in page, text
+
+
+def test_receipt_pdf_download(app, client, records):
+    with app.app_context():
+        submit(**records)
+        db.session.commit()
+    login(client)
+    response = client.get('/receipts/1/pdf')
+    assert response.status_code == 200 and response.mimetype == 'application/pdf'
+    assert response.data.startswith(b'%PDF') and 'RCT-000001.pdf' in response.headers['Content-Disposition']
+    post(client, '/auth/logout', {})
+    login(client, 'coordinator')
+    assert client.get('/receipts/1/pdf').status_code == 403

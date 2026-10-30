@@ -1,0 +1,12 @@
+{% extends 'base.html' %}{% from '_ui.html' import heading,icon,transaction_table,pagination %}
+{% block title %}{{ 'My requests' if current_user.role.name == 'Coordinator' else 'Transactions' }} · SOCCS Treasury{% endblock %}
+{% block content %}{% call heading('My requests' if current_user.role.name == 'Coordinator' else 'Transactions','Payments, income and expenses with their approval status.') %}
+{% if current_user.has_permission('payments.record') or current_user.has_permission('payments.submit') %}<a class="btn btn-primary" href="{{ url_for('finance.transaction_form',kind='Payment') }}">{{ icon('plus') }} Payment</a>{% endif %}
+{% if current_user.has_permission('expenses.record') or current_user.has_permission('expenses.submit') %}<a class="btn btn-outline-primary" href="{{ url_for('finance.transaction_form',kind='Expense') }}">{{ icon('plus') }} Expense</a>{% endif %}
+{% if current_user.has_permission('income.record') %}<a class="btn btn-outline-primary" href="{{ url_for('finance.transaction_form',kind='Income') }}">{{ icon('plus') }} Income</a>{% endif %}
+{% endcall %}
+<section class="panel"><form class="filter-bar"><div class="search-field">{{ icon('search') }}<input class="form-control" name="q" value="{{ q }}" placeholder="Search TXN number, member, description or reference" aria-label="Search transactions"></div>
+<select class="form-select" name="kind" aria-label="Type"><option value="">All types</option>{% for k in ['Payment','Income','Expense'] %}<option {{ 'selected' if kind == k }}>{{ k }}</option>{% endfor %}</select>
+<select class="form-select" name="status" aria-label="Status"><option value="">All statuses</option>{% for s in ['Pending','Approved','Rejected'] %}<option {{ 'selected' if status == s }}>{{ s }}</option>{% endfor %}</select>
+<button class="btn btn-outline-primary">Filter</button><a href="{{ url_for('finance.transactions') }}">Reset</a></form>
+{{ transaction_table(entries.items) }}{{ pagination(entries) }}</section>{% endblock %}

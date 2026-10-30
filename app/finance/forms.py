@@ -20,7 +20,10 @@ AMOUNT = [InputRequired(), cents, NumberRange(min=Decimal('.01'), max=Decimal('9
 
 
 class MemberForm(FlaskForm):
-    student_number = StringField('Student number', validators=[InputRequired(), Length(max=30), Regexp(r'^[A-Za-z0-9-]+$', message='Use letters, numbers and hyphens.')])
+    student_number = StringField('Student number', filters=[lambda value: value.strip() if isinstance(value, str) else value],
+                                 validators=[InputRequired(), Regexp(r'^\d{4}-\d{4}\Z', message='Use the format 1234-5678: four digits, a hyphen, then four digits.')],
+                                 render_kw={'inputmode': 'numeric', 'pattern': r'\d{4}-\d{4}', 'maxlength': 9, 'placeholder': '2026-0001',
+                                            'title': 'Four digits, a hyphen, then four digits (e.g. 2026-0001)', 'data-student-number': ''})
     full_name = StringField('Full name', validators=[InputRequired(), Length(min=2, max=120)])
     program = SelectField('Program', choices=[('IT', 'BS Information Technology'), ('CS', 'BS Computer Science')])
     year_level = SelectField('Year level', coerce=int, choices=[(x, f'Year {x}') for x in range(1, 7)])

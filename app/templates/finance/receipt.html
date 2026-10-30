@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}{{ receipt.number }} · Official receipt · SOCCS Treasury{% endblock %}
+{% block main_class %}workspace-main receipt-view{% endblock %}
+{% block content %}
+<div class="receipt-toolbar no-print">
+  <a class="btn btn-light" href="{{ url_for('finance.transaction_detail',tx_id=tx.id) }}">Back to {{ tx.number }}</a>
+  <div class="receipt-actions">
+    <a class="btn btn-outline-primary" href="{{ url_for('finance.receipt_pdf',receipt_id=receipt.id) }}" download>Download PDF</a>
+    <button class="btn btn-primary" type="button" data-print>Print receipt</button>
+  </div>
+</div>
+
+<article class="or-paper" aria-label="Official receipt {{ receipt.number }}">
+  <header class="or-head">
+    <div class="or-org">
+      <img src="{{ url_for('static',filename='images/socs-logo.png') }}" alt="" width="64" height="64">
+      <div>
+        <strong>Student Organization of the College of Computer Studies</strong>
+        <span>Laguna State Polytechnic University, Santa Cruz Campus</span>
+      </div>
+    </div>
+    <div class="or-title">
+      <h1>Official receipt</h1>
+      <dl>
+        <div><dt>No.</dt><dd class="or-number">{{ receipt.number }}</dd></div>
+        <div><dt>Date</dt><dd>{{ tx.occurred_on.strftime('%d %B %Y') }}</dd></div>
+      </dl>
+    </div>
+  </header>
+
+  <section class="or-body">
+    <div class="or-line">
+      <span class="or-label">Received from</span>
+      <span class="or-value"><strong>{{ tx.member_name }}</strong><small>Student no. {{ tx.student_number }}, BS{{ tx.program }}</small></span>
+    </div>
+    <div class="or-line">
+      <span class="or-label">The amount of</span>
+      <span class="or-value"><strong>{{ tx.amount|peso_words }}</strong></span>
+    </div>
+    <div class="or-line">
+      <span class="or-label">For</span>
+      <span class="or-value"><strong>{{ tx.description }}</strong><small>Academic year {{ tx.academic_year.name if tx.academic_year else 'not set' }}</small></span>
+    </div>
+    <div class="or-line">
+      <span class="or-label">Paid by</span>
+      <span class="or-value"><strong>{{ tx.method }}</strong>{% if tx.reference %}<small>Reference {{ tx.reference }}</small>{% endif %}</span>
+    </div>
+  </section>
+
+  <section class="or-amount-row">
+    {% if income %}
+    <table class="or-split" aria-label="How this payment is shared">
+      <thead><tr><th scope="col">Share</th><th scope="col" class="num">Amount</th></tr></thead>
+      <tbody>
+        <tr><td>SOCCS</td><td class="num">{{ income.soccs_share|money }}</td></tr>
+        <tr><td>ITUH</td><td class="num">{{ income.ituh_share|money }}</td></tr>
+        <tr><td>CSS</td><td class="num">{{ income.css_share|money }}</td></tr>
+      </tbody>
+    </table>
+    {% endif %}
+    <div class="or-total"><span>Total received</span><strong>{{ tx.amount|money }}</strong></div>
+  </section>
+
+  <footer class="or-foot">
+    <div class="or-sign">
+      <span class="or-sign-name">{{ tx.approver.full_name if tx.approver else '' }}</span>
+      <span class="or-sign-role">Received by{% if tx.approver %}, {{ tx.approver.role.name }}{% endif %}</span>
+    </div>
+    <div class="or-meta">
+      <p>Issued {{ receipt.issued_at|localtime }} for transaction {{ tx.number }}.{% if tx.verified_at %} Verified by {{ tx.verifier.full_name }}.{% endif %}</p>
+      <p>Student details are shown as recorded when the payment was made.</p>
+    </div>
+  </footer>
+</article>
+{% endblock %}

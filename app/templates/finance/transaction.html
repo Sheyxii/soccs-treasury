@@ -1,0 +1,31 @@
+{% extends 'base.html' %}{% from '_ui.html' import heading,badge %}
+{% block title %}{{ tx.number }} · SOCCS Treasury{% endblock %}
+{% block content %}{% call heading(tx.number, tx.kind ~ ' on ' ~ tx.occurred_on.strftime('%d %b %Y'), 'Transaction') %}<a class="btn btn-light" href="{{ url_for('finance.transactions') }}">All transactions</a>{% if tx.payment and tx.payment.receipt %}<a class="btn btn-primary" href="{{ url_for('finance.receipt',receipt_id=tx.payment.receipt.id) }}">View receipt</a>{% endif %}{% endcall %}
+{% if tx.status == 'Pending' %}<div class="alert alert-warning">{% if tx.overspend %}Over budget. Awaiting Treasurer review and explicit approval, because this expense exceeds the remaining category allocation.{% else %}Awaiting Treasurer review. This request does not affect funds or budgets until it is approved.{% endif %}</div>
+{% elif tx.status == 'Rejected' %}<div class="alert alert-danger">Rejected{% if tx.remarks %}: {{ tx.remarks }}{% endif %}</div>{% endif %}
+<section class="panel detail-summary">
+<div><small>Status</small><strong>{{ badge(tx.status) }}</strong></div>
+<div><small>Amount</small><strong>{{ tx.amount|money }}</strong></div>
+<div><small>Method</small><strong>{{ tx.method }}</strong></div>
+<div><small>Reference</small><strong>{{ tx.reference or 'None' }}</strong></div>
+</section>
+<section class="panel"><div class="panel-heading"><div><h2>Details</h2><p>{{ tx.description }}</p></div></div>
+<div class="table-responsive"><table class="table treasury-table"><tbody>
+{% if tx.kind == 'Payment' %}<tr><th>Member</th><td>{{ tx.member_name }}, {{ tx.student_number }}, BS{{ tx.program }}</td></tr><tr><th>Academic year</th><td>{{ tx.academic_year.name if tx.academic_year else 'Not set' }}</td></tr>{% endif %}
+{% if tx.kind == 'Expense' and tx.category %}<tr><th>Budget category</th><td>{{ tx.category.budget.name }} / {{ tx.category.name }}</td></tr>{% endif %}
+{% if income %}<tr><th>Income shares</th><td>SOCCS {{ income.soccs_share|money }}, ITUH {{ income.ituh_share|money }}, CSS {{ income.css_share|money }}</td></tr>{% endif %}
+<tr><th>Submitted by</th><td>{{ tx.requester.full_name }}, {{ tx.created_at|localtime }}</td></tr>
+{% if tx.reviewer %}<tr><th>Reviewed by</th><td>{{ tx.reviewer.full_name }}, {{ tx.reviewed_at|localtime }}</td></tr>{% endif %}
+{% if tx.approver %}<tr><th>{{ 'Rejected by' if tx.status == 'Rejected' else 'Approved by' }}</th><td>{{ tx.approver.full_name }}, {{ tx.decided_at|localtime }}</td></tr>{% endif %}
+{% if tx.remarks and tx.status != 'Rejected' %}<tr><th>Remarks</th><td>{{ tx.remarks }}</td></tr>{% endif %}
+{% if tx.verifier %}<tr><th>Verification</th><td>Verified by {{ tx.verifier.full_name }}, {{ tx.verified_at|localtime }}</td></tr>{% endif %}
+</tbody></table></div></section>
+{% if tx.status == 'Pending' and (current_user.has_permission('transactions.review') or (has_authority(current_user,'overspend') and tx.overspend)) %}
+<section class="panel form-panel mt-4 decision-panel"><h2>Review this request</h2><p class="decision-help">Approving posts it to the accounts right away{% if tx.kind == 'Payment' %} and issues a receipt{% endif %}. Rejecting keeps it out of the accounts and tells {{ tx.requester.full_name }} why.</p>
+<form method="post" action="{{ url_for('finance.transaction_decide',tx_id=tx.id) }}">{{ form.hidden_tag() }}
+<div class="mb-3"><label class="form-label" for="remarks">Reason {% if tx.overspend %}<span class="required-note">required for both approving and rejecting this over-budget expense</span>{% else %}<span class="required-note">required when rejecting</span>{% endif %}</label>{{ form.remarks(class_='form-control', rows=3, placeholder='e.g. GCash reference checked against the screenshot' if tx.kind == 'Payment' else 'e.g. Receipt OR-1088 checked') }}</div>
+<div class="decision-actions"><button type="submit" name="decision" value="approve" class="btn btn-primary">Approve {{ tx.kind|lower }}</button><button type="submit" name="decision" value="reject" class="btn btn-outline-danger">Reject</button></div></form></section>{% endif %}
+{% if tx.kind == 'Payment' and tx.status == 'Approved' and not tx.verified_at and current_user.has_permission('payments.verify') %}
+<section class="panel form-panel mt-4"><h2>Verify payment</h2><p class="panel-note">Confirm that you checked the cash count or GCash evidence for this payment.</p>
+<form method="post" action="{{ url_for('finance.transaction_verify',tx_id=tx.id) }}">{{ verify_form.hidden_tag() }}{{ verify_form.submit(class_='btn btn-outline-primary',value='Mark as verified') }}</form></section>{% endif %}
+{% endblock %}

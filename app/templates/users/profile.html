@@ -1,23 +1,16 @@
-{% extends "base.html" %}
-{% from "_forms.html" import field %}
+{% extends "base.html" %}{% from '_ui.html' import heading %}{% from "_forms.html" import field %}
 {% block title %}My account · SOCCS Treasury{% endblock %}
 {% block content %}
-<h1 class="mb-4">My account</h1>
-<div class="row g-4">
-  <div class="col-md-5"><section class="card border-0 shadow-sm"><div class="card-body p-4">
-    <h2 class="h4">Officer details</h2>
-    <dl><dt>Name</dt><dd>{{ current_user.full_name }}</dd><dt>Username</dt><dd>{{ current_user.username }}</dd><dt>Role</dt><dd>{{ current_user.role.name }}</dd></dl>
-  </div></section></div>
-  <div class="col-md-7"><section class="card border-0 shadow-sm"><div class="card-body p-4">
-    <h2 class="h4">Change password</h2>
-    <p class="text-secondary">Use 12–128 characters. Changing your password signs out all existing sessions.</p>
-    <form method="post">
-      {{ form.hidden_tag() }}
-      {{ field(form.current_password, 'current-password') }}
-      {{ field(form.password, 'new-password') }}
-      {{ field(form.confirm, 'new-password') }}
-      {{ form.submit(class_='btn btn-primary') }}
-    </form>
-  </div></section></div>
+{{ heading('My account', 'Your officer details and password.') }}
+<div class="form-layout">
+<section class="panel form-panel"><h2>Change password</h2>
+<p class="panel-intro">Use 12 to 128 characters. Changing your password signs you out everywhere, so you will sign in again with the new one.</p>
+<form method="post">{{ form.hidden_tag() }}
+{{ field(form.current_password, 'current-password') }}
+<div class="form-grid">{{ field(form.password, 'new-password') }}{{ field(form.confirm, 'new-password') }}</div>
+<div class="form-actions">{{ form.submit(class_='btn btn-primary') }}</div></form></section>
+<section class="panel help-panel"><h2>Officer details</h2>
+<dl class="detail-list"><dt>Name</dt><dd>{{ current_user.full_name }}</dd><dt>Username</dt><dd>{{ current_user.username }}</dd><dt>Role</dt><dd>{{ current_user.role.name }}</dd></dl>
+<p class="mt-3 mb-0">Names, roles and account status are managed by the local system custodian.</p></section>
 </div>
 {% endblock %}

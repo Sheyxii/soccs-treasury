@@ -31,7 +31,7 @@
         </div>
         <div class="login-password-control">
           {{ form.password(class_='form-control' + (' is-invalid' if form.password.errors else ''), autocomplete='current-password', aria_describedby='password-errors') }}
-          <button class="password-toggle" type="button" aria-controls="password" aria-label="Show password" aria-pressed="false">
+          <button class="password-toggle" type="button" aria-controls="password" aria-label="Show password" aria-pressed="false" data-show-icon="{{ url_for('static', filename='images/show.png') }}" data-hide-icon="{{ url_for('static', filename='images/hide.png') }}">
             <img src="{{ url_for('static', filename='images/show.png') }}" alt="" aria-hidden="true">
           </button>
         </div>
@@ -47,18 +47,4 @@
   <p>After your password is reset, return here to sign in with your new password.</p>
   <form method="dialog"><button class="login-submit" autofocus>Back to sign in</button></form>
 </dialog>
-<script>
-  const recoveryDialog = document.getElementById("password-recovery");
-  document.querySelector(".login-forgot").addEventListener("click", () => recoveryDialog.showModal());
-  document.querySelector(".password-toggle").addEventListener("click", function () {
-    const input = document.getElementById("password");
-    const visible = input.type === "text";
-    input.type = visible ? "password" : "text";
-    this.querySelector("img").src = visible
-      ? "{{ url_for('static', filename='images/show.png') }}"
-      : "{{ url_for('static', filename='images/hide.png') }}";
-    this.setAttribute("aria-label", visible ? "Show password" : "Hide password");
-    this.setAttribute("aria-pressed", String(!visible));
-  });
-</script>
 {% endblock %}

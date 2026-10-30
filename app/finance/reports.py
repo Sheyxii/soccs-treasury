@@ -1,7 +1,8 @@
 """Cash-basis reports built only from posted ledger entries."""
 import csv
 import io
-from datetime import date
+from collections import defaultdict
+from datetime import date, timedelta
 from decimal import Decimal
 from flask import render_template, request, Response, abort
 from flask_login import current_user
@@ -27,21 +28,40 @@ def dashboard_data():
     rows = db.session.execute(db.select(Transaction.occurred_on, Transaction.kind, Transaction.amount).where(Transaction.status == 'Approved', Transaction.occurred_on >= today().replace(day=1))).all()
     data['month_income'] = sum((r.amount for r in rows if r.kind != 'Expense'), Decimal(0))
     data['month_expenses'] = sum((r.amount for r in rows if r.kind == 'Expense'), Decimal(0))
-    chart = []
-    for offset in range(5, -1, -1):
-        index = today().year * 12 + today().month - 1 - offset
-        start = date(index // 12, index % 12 + 1, 1)
-        next_index = index + 1
-        next_start = date(next_index // 12, next_index % 12 + 1, 1)
-        from datetime import timedelta
-        t = totals(start, next_start - timedelta(days=1))
-        chart.append(dict(label=start.strftime('%b'), income=t['soccs'], expense=t['expenses']))
-    maximum = max([max(row['income'], row['expense']) for row in chart] + [Decimal(1)])
-    for row in chart:
-        row['income_height'] = float(row['income'] / maximum * 100)
-        row['expense_height'] = float(row['expense'] / maximum * 100)
-    data['chart'] = chart
+    data['chart'] = monthly_chart()
+    gross = data['gross'] or Decimal(0)
+    data['shares'] = [dict(label=label, value=value, color=color,
+                           percent=float(value / gross * 100) if gross else 0.0)
+                      for label, value, color in (('SOCCS', data['soccs'], '#6c3fc4'),
+                                                  ('ITUH', data['ituh'], '#a98be6'),
+                                                  ('CSS', data['css'], '#c76fae'))]
     return data
+
+
+def monthly_chart(months=12):
+    """SOCCS income and posted expenses per month for the last 12 months, in two queries.
+    The page shows the last six months by default."""
+    current = today()
+    months_back = [(current.year * 12 + current.month - 1 - offset) for offset in range(months - 1, -1, -1)]
+    first = date(months_back[0] // 12, months_back[0] % 12 + 1, 1)
+    income, expense = defaultdict(Decimal), defaultdict(Decimal)
+    for day, amount in db.session.execute(db.select(Transaction.occurred_on, Income.soccs_share).join(Income.transaction).where(Transaction.occurred_on >= first)):
+        income[(day.year, day.month)] += amount
+    for day, amount in db.session.execute(db.select(Transaction.occurred_on, Expense.amount).join(Expense.transaction).where(Transaction.occurred_on >= first)):
+        expense[(day.year, day.month)] += amount
+    chart = []
+    for position, index in enumerate(months_back):
+        start = date(index // 12, index % 12 + 1, 1)
+        end = date((index + 1) // 12, (index + 1) % 12 + 1, 1) - timedelta(days=1)
+        key = (start.year, start.month)
+        chart.append(dict(label=start.strftime('%b'), long_label=start.strftime('%B %Y'),
+                          start=start.isoformat(), end=end.isoformat(), recent=position >= months - 6,
+                          income=income[key], expense=expense[key]))
+    maximum = max([max(row['income'], row['expense']) for row in chart if row['recent']] + [Decimal(1)])
+    for row in chart:
+        row['income_height'] = float(min(row['income'] / maximum, 1) * 100)
+        row['expense_height'] = float(min(row['expense'] / maximum, 1) * 100)
+    return chart
 
 
 def report_data():

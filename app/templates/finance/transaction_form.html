@@ -1,0 +1,14 @@
+{% extends 'base.html' %}{% from '_ui.html' import heading %}{% from '_forms.html' import field %}
+{% set titles = {'Payment':'Record membership payment','Expense':'Record expense','Income':'Record income'} %}
+{% set notes = {'Payment':'Annual membership fee for one member and academic year. Partial payments are not supported.','Expense':'Spending charged to a budget category. A receipt or reference number is required.','Income':'Water-refilling collections. This income belongs fully to SOCCS.'} %}
+{% block title %}{{ titles[kind] }} · SOCCS Treasury{% endblock %}
+{% block content %}{{ heading(titles[kind],notes[kind]) }}
+{% if current_user.role.name != 'Treasurer' %}<div class="alert alert-info">This will be saved as a Pending request. It does not affect funds or budgets until the Treasurer approves it.</div>{% endif %}
+{% if kind == 'Payment' and not years %}<div class="alert alert-warning">No academic year is configured yet. The Treasurer must create one in Fee settings first.</div>{% endif %}
+{% if kind == 'Expense' and not categories %}<div class="alert alert-warning">No active budget categories exist yet. Create a budget and add categories first.</div>{% endif %}
+<section class="panel form-panel"><form method="post" novalidate>{{ form.hidden_tag() }}<div class="form-grid">{% for name in fields %}{{ field(form[name]) }}{% endfor %}</div>
+{% if kind == 'Expense' %}<p class="panel-note" id="budget-feedback" aria-live="polite"></p>{% endif %}
+{% set options = {'fees': {}, 'categories': {}} %}{% for y in years %}{% set _ = options.fees.update({y.id|string: y.fee|string}) %}{% endfor %}{% for c in categories %}{% set _ = options.categories.update({c.id|string: c.remaining|string}) %}{% endfor %}
+<script type="application/json" id="transaction-options">{{ options|tojson }}</script>
+<p class="panel-note">GCash payments: check the payment evidence manually and enter its 10–20 digit reference number.</p>
+<div class="form-actions"><a class="btn btn-light" href="{{ url_for('finance.transactions') }}">Cancel</a>{{ form.submit(class_='btn btn-primary') }}</div></form></section>{% endblock %}

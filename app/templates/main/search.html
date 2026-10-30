@@ -1,0 +1,8 @@
+{% extends 'base.html' %}{% from '_ui.html' import heading,transaction_table,empty,badge %}
+{% block title %}Search · SOCCS Treasury{% endblock %}
+{% block content %}{{ heading('Search results' if q else 'Search', ('Results for “' ~ q ~ '”') if q else 'Type a name, student number, TXN number or reference in the search bar above.') }}
+{% if q %}
+{% if can_members %}<section class="panel mb-4"><div class="panel-heading"><div><h2>Members</h2><p>{{ members|length }} match{{ '' if members|length == 1 else 'es' }}{{ ' (showing first 10)' if members|length == 10 }}</p></div><a href="{{ url_for('finance.members',q=q) }}">Open in Members</a></div>
+<div class="table-responsive"><table class="table treasury-table"><thead><tr><th>Student</th><th>Program</th><th>Year & section</th><th>Record</th></tr></thead><tbody>{% for m in members %}<tr><td><a class="record-link" href="{{ url_for('finance.member_detail',member_id=m.id) }}">{{ m.full_name }}</a><small class="cell-detail">{{ m.student_number }}</small></td><td><span class="program-tag">BS{{ m.program }}</span></td><td>{{ m.year_level }} · {{ m.section }}</td><td>{{ 'Active' if m.active else 'Inactive' }}</td></tr>{% else %}<tr><td colspan="4">{{ empty('No members found','Try a different name, student number or section.') }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+{% if can_transactions %}<section class="panel"><div class="panel-heading"><div><h2>Transactions</h2><p>{{ transactions|length }} match{{ '' if transactions|length == 1 else 'es' }}{{ ' (showing latest 15)' if transactions|length == 15 }}</p></div><a href="{{ url_for('finance.transactions',q=q) }}">Open in Transactions</a></div>{{ transaction_table(transactions) }}</section>{% endif %}
+{% endif %}{% endblock %}
