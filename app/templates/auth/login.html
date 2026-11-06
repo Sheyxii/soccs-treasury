@@ -18,7 +18,6 @@
     <form method="post" novalidate>
       {{ form.hidden_tag() }}
       <div class="login-notices">
-        {% if config.get('DEMO_MODE') %}<div class="login-alert login-alert-info">Sample-data preview &mdash; separate from the office database.</div>{% endif %}
         {% for category, message in get_flashed_messages(with_categories=true) %}
         <div class="login-alert login-alert-{{ category if category in ['success','danger','warning','info'] else 'info' }}" role="alert">{{ message }}</div>
         {% endfor %}

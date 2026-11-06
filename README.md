@@ -164,13 +164,12 @@ Use a 12–128 character password. Changes are audited and revoke existing sessi
 .\.venv\Scripts\python.exe -m flask --app app set-user-status coordinator inactive
 ~~~
 
-## Tests and preview
+## Tests
 
 ~~~powershell
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe scripts/test_mysql.py
 .\.venv\Scripts\python.exe -m flask --app app db check
-.\.venv\Scripts\python.exe scripts/preview.py
 ~~~
 
 Tests use disposable databases. The MySQL helper creates a random
@@ -178,10 +177,9 @@ soccs_treasury_test_* database and removes only that generated database afterwar
 It assumes local XAMPP root with a blank password on port 3306. Never point test
 fixtures at operational data. See [tests/README.md](tests/README.md).
 
-The sample preview (double-click **Start-Preview.cmd**) runs at **http://127.0.0.1:5001**
-in a separate SQLite database that is rebuilt on every start, and displays a sample-data banner. Usernames: treasurer, coordinator, auditor,
-president, adviser. Their preview-only password is **Preview-only-2026!**.
-These credentials do not apply to the real app.
+Use **Start-Treasury.cmd** or `.\.venv\Scripts\python.exe run.py` to open the
+main website at **http://127.0.0.1:5000**. Start XAMPP MySQL first and sign in
+with your existing officer account.
 
 ## Project map
 
@@ -193,7 +191,7 @@ These credentials do not apply to the real app.
 | app/auth/, app/users/, app/permissions.py | Authentication and authorization |
 | app/templates/, app/static/ | Purple Bootstrap workspace, offline assets, print layouts |
 | migrations/ | Versioned schema |
-| scripts/ | Setup, pre-upgrade snapshot, preview and isolated MySQL tests |
+| scripts/ | Setup, pre-upgrade snapshot and isolated MySQL tests |
 | tests/ | Regression and workflow tests |
 | docs/implementation.md | Decisions, verification and remaining officer acceptance |
 

@@ -51,10 +51,11 @@ SOCCS's own confirmed roles and policies govern this implementation.
 - Existing MySQL officer accounts were preserved. All treasury tables passed the
   database integrity check. No sample financial/member records were inserted into
   the real database.
-- Browser review uses the separate sample SQLite preview.
+- Browser review used the separate sample SQLite preview, which has since been
+  removed. Use `Start-Treasury.cmd` or `python run.py` for the main website.
 - Browser checks covered payment approval, exact shares, receipt rendering,
   overspending warnings, sample backup creation, and layouts at 300, 390, 1024
-  and 1440 pixels. The preview uses a distinct cookie, signing key and backup folder.
+  and 1440 pixels. That preview used a distinct cookie, signing key and backup folder.
 - The real installation awaits actual academic-year dates and member/budget data.
 
 Before office turnover, rehearse collection/rejection/approval with the officers,
