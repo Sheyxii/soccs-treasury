@@ -70,7 +70,8 @@ def post_transaction(tx, actor, remarks=''):
 
 
 def submit_transaction(actor, *, kind, amount, occurred_on, description, method, reference,
-                       submission_key, member_id=None, academic_year_id=None, category_id=None):
+                       submission_key, member_id=None, academic_year_id=None, category_id=None,
+                       process_pending=False):
     permission = {'Payment': ('payments.record', 'payments.submit'), 'Expense': ('expenses.record', 'expenses.submit'), 'Income': ('income.record',)}
     if kind not in permission or not any(actor.has_permission(p) for p in permission[kind]):
         abort(403)
@@ -106,7 +107,18 @@ def submit_transaction(actor, *, kind, amount, occurred_on, description, method,
         tx.member_name, tx.student_number, tx.program = member.full_name, member.student_number, member.program
         tx.soccs_percent, tx.ituh_percent = year.soccs_percent, year.ituh_percent
         tx.payment_key = f'{member.id}:{year.id}'
-        if db.session.scalar(db.select(Transaction.id).where(Transaction.payment_key == tx.payment_key)):
+        existing = db.session.scalar(db.select(Transaction).where(
+            Transaction.payment_key == tx.payment_key).with_for_update())
+        if (existing and existing.status == 'Pending' and process_pending
+                and actor.has_permission('payments.record') and actor.has_permission('transactions.review')):
+            previous = f'{existing.occurred_on}, {existing.method}, {existing.reference}, PHP {existing.amount:.2f}'
+            for name in ('amount', 'occurred_on', 'description', 'method', 'reference', 'reference_key'):
+                setattr(existing, name, getattr(tx, name))
+            record_audit('payment.updated', actor, record=existing.number,
+                         remarks=f'Pending payment processed via Record Payment. Previous: {previous}'[:255])
+            post_transaction(existing, actor, 'Payment received and recorded by Treasurer')
+            return existing
+        if existing:
             raise BusinessError('This member already has an approved payment or pending request for this academic year.')
     if kind == 'Expense':
         category = db.session.scalar(db.select(BudgetCategory).where(BudgetCategory.id == category_id).with_for_update())

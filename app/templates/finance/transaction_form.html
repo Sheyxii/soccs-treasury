@@ -4,6 +4,7 @@
 {% block title %}{{ titles[kind] }} · SOCCS Treasury{% endblock %}
 {% block content %}{{ heading(titles[kind],notes[kind]) }}
 {% if current_user.role.name != 'Treasurer' %}<div class="alert alert-info">This will be saved as a Pending request. It does not affect funds or budgets until the Treasurer approves it.</div>{% endif %}
+{% if kind == 'Payment' and current_user.has_permission('payments.record') %}<div class="alert alert-info">If this member has a pending request for the selected academic year, saving will update that request with the payment details below and mark it paid. Confirm that payment has been received before saving. Already-paid memberships cannot be recorded again.</div>{% endif %}
 {% if kind == 'Payment' and not years %}<div class="alert alert-warning">No academic year is configured yet. The Treasurer must create one in Fee settings first.</div>{% endif %}
 {% if kind == 'Expense' and not categories %}<div class="alert alert-warning">No active budget categories exist yet. Create a budget and add categories first.</div>{% endif %}
 <section class="panel form-panel"><form method="post" novalidate>{{ form.hidden_tag() }}<div class="form-grid">{% for name in fields %}{{ field(form[name]) }}{% endfor %}</div>

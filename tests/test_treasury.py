@@ -75,6 +75,61 @@ def test_pending_does_not_post_reject_releases_reservation(app, records):
             decide_transaction(tx.id, officer('treasurer'), 'approve', '')
 
 
+def test_record_payment_processes_pending_request(app, client, records):
+    with app.app_context():
+        tx = submit('coordinator', **records)
+        db.session.commit()
+        tx_id, requester_id = tx.id, tx.requester_id
+    login(client)
+    path = '/transactions/new/Payment'
+    page = client.get(path)
+    assert 'mark it paid' in page.text
+    key = re.search(r'name="submission_key"[^>]*value="([^"]+)"', page.text).group(1)
+    data = dict(member_id=records['member_id'], academic_year_id=records['academic_year_id'],
+                amount='250', occurred_on='2026-10-02', method='GCash', reference='1234567890123',
+                description='Payment received by Treasurer', submission_key=key)
+    response = post(client, path, data, path)
+    assert 'Transaction posted.' in response.text
+    with app.app_context():
+        tx = db.session.get(Transaction, tx_id)
+        assert tx.status == 'Approved' and tx.requester_id == requester_id
+        assert tx.approver_id == officer('treasurer').id
+        assert tx.method == 'GCash' and tx.reference_key == '1234567890123'
+        assert tx.occurred_on == date(2026, 10, 2)
+        assert totals()['gross'] == 250
+        for model in (Transaction, Payment, Income, Receipt):
+            assert db.session.scalar(db.select(db.func.count(model.id))) == 1
+        assert db.session.scalar(db.select(AuditLog).where(AuditLog.action == 'payment.updated'))
+    response = post(client, path, data, path)
+    assert 'already has' in response.text
+    with app.app_context():
+        assert totals()['gross'] == 250
+
+
+def test_coordinator_cannot_process_pending_payment(app, records):
+    with app.app_context():
+        tx = submit('coordinator', **records)
+        db.session.commit()
+        with pytest.raises(BusinessError, match='already has'):
+            submit('coordinator', process_pending=True, **records)
+        db.session.rollback()
+        assert tx.status == 'Pending' and totals()['gross'] == 0
+
+
+def test_process_pending_payment_rolls_back_on_duplicate_reference(app, records):
+    with app.app_context():
+        tx = submit('coordinator', **records)
+        submit(kind='Income', method='GCash', reference='1234567890123')
+        db.session.commit()
+        with pytest.raises(IntegrityError):
+            submit(process_pending=True, method='GCash', reference='1234567890123', **records)
+        db.session.rollback()
+        assert tx.status == 'Pending' and tx.method == 'Cash' and tx.reference_key is None
+        assert db.session.scalar(db.select(db.func.count(Payment.id))) == 0
+        assert db.session.scalar(db.select(db.func.count(Receipt.id))) == 0
+        assert totals()['gross'] == 250
+
+
 def test_approve_is_atomic_and_cannot_repeat(app, records):
     with app.app_context():
         tx = submit('coordinator', **records)

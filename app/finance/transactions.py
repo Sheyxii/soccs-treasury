@@ -70,7 +70,7 @@ def transaction_form(kind):
             form.description.data = 'Water refilling station collection'
     if form.validate_on_submit():
         try:
-            tx = submit_transaction(current_user, kind=kind, **{name: getattr(form, name).data for name in ('amount', 'occurred_on', 'description', 'method', 'reference', 'submission_key', 'member_id', 'academic_year_id', 'category_id')})
+            tx = submit_transaction(current_user, kind=kind, process_pending=(kind == 'Payment'), **{name: getattr(form, name).data for name in ('amount', 'occurred_on', 'description', 'method', 'reference', 'submission_key', 'member_id', 'academic_year_id', 'category_id')})
             if save():
                 flash('Transaction posted.' if tx.status == 'Approved' else 'Request saved as Pending. Approval is required before it affects the accounts.', 'success' if tx.status == 'Approved' else 'warning')
                 return redirect(url_for('finance.transaction_detail', tx_id=tx.id))
